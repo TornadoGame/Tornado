@@ -9,11 +9,22 @@
 ;****************************************************************************
 
 		OPTION	M510		;<<<<< MASM v5.10 <<<<<
-
+PUBLIC DamagedDisp		
+PUBLIC TIALDDisp_Ori		
+PUBLIC TIALDDisp_Ori2
+PUBLIC StealMouse		
+PUBLIC UpdateTAB
+PUBLIC RefDisp
+PUBLIC MapDisp
+PUBLIC RoutePlanDisp		
+PUBLIC TIALDDisp
+PUBLIC FLIRDisp_Ori
+PUBLIC FLIRDisp_Ori2
+PUBLIC FLIRDisp_Ori3
+PUBLIC FLIRDisp_Ori4
 		PUBLIC	UpdateTAB1
 		PUBLIC	UpdateTAB2
 		PUBLIC	ValidateTIALD
-
 		PUBLIC	TAB1
 		PUBLIC	TAB2
 
@@ -22,6 +33,32 @@
 		PUBLIC	TIALDActive
 		PUBLIC	LaserActive
 		PUBLIC	RadarTest
+EXTRN	CrewMode:WORD		
+EXTRN SSF_HUD:BYTE		
+EXTRN UpdateHUD:NEAR	
+EXTRN UpdateHUD2:NEAR		
+EXTRN QuieterCockpit:BYTE	
+EXTRN   InCockpit:BYTE		
+EXTRN	FromHomeToPgUp:BYTE
+EXTRN	KF_NavigViewWithCtrl:BYTE
+EXTRN	FullScreen:BYTE		
+EXTRN   NVG_set:BYTE
+;EXTRN   KF_NVG_MFD:BYTE
+;EXTRN   KF_NONVG_MFD:BYTE
+;EXTRN   KF_HUDContrast:BYTE
+EXTRN	IronWork:BYTE		
+;EXTRN  SelectActDisp:NEAR	
+EXTRN DrawADIRollBug:NEAR
+EXTRN UpdateCtrlSFace:NEAR
+EXTRN  UpdateEScope2:NEAR	
+EXTRN	UpdateHUD2:NEAR	
+EXTRN	UpdateADI2:NEAR	
+EXTRN	LoadExtrnPan:NEAR    ;added on 2/11/2017
+EXTRN	UpdateExtrn:NEAR     ;added on 6/11/2017
+EXTRN	UpdateRWR:NEAR
+EXTRN	DrawNavigPanel:FAR
+EXTRN VGA_DrwNavigPan:NEAR
+EXTRN VGA_DrwNavigPanBrief:NEAR
 
 		EXTRN	RandX:FAR
 		EXTRN	HLineDraw:FAR
@@ -54,6 +91,12 @@
 
 		EXTRN	CloudBase:DWORD
 
+        ;======== for roll indicator
+		EXTRN	Roll:WORD
+		EXTRN	DialXY1:BYTE
+		EXTRN	DialXY2:BYTE
+		;======== for roll indicator
+EXTRN	Cannons:WORD ;hacked
 		EXTRN	M_VIEW:WORD
 		EXTRN	TMP_VIEW:WORD
 		EXTRN	WPPtr:WORD
@@ -120,6 +163,11 @@
 		EXTRN	MAP_ORG_CENTRE:ABS
 		EXTRN	MAP_ORG_BASE:ABS
 
+		EXTRN	ILSActive:BYTE
+		EXTRN	ILSLocalPos:WORD
+		EXTRN	ILSGlidePos:WORD
+		
+		EXTRN	ZFT_COCKPIT:ABS
 ;============================================================================
 
 		INCLUDE	TAB.INC
@@ -146,15 +194,170 @@
 
 DATA		SEGMENT PARA PUBLIC 'DATA'
 
+HUD_X_ORG	EQU	160
+HUD_Y_ORG	EQU	96
+
+SetUp$		LABEL	BYTE
+		P_OVER1
+		P_CHAR2
+		PD_ATTR	000h,000h,000h,000h,0aah,000h,COL_HUD,000h
+		P_END
+
+Cannon$		LABEL	BYTE
+        
+		P_DECAT	00010011b
+		PD_X	HUD_X_ORG-52
+		PD_Y	HUD_Y_ORG+27-90
+		DB	"GUNS"
+		PD_X	HUD_X_ORG-52
+		PD_Y	HUD_Y_ORG+33-90
+		DB	"x"
+		PV_DECW	Cannons
+		P_DECAT	00000000b
+		P_END
+
+Cannon2$		LABEL	BYTE
+        
+		P_DECAT	00010011b
+		PD_X	HUD_X_ORG-52
+		PD_Y	HUD_Y_ORG+27-40
+		DB	"GUNS"
+		PD_X	HUD_X_ORG-52
+		PD_Y	HUD_Y_ORG+33-40
+		DB	"x"
+		PV_DECW	Cannons
+		P_DECAT	00000000b
+		P_END		
+		
+;------------------------------------
+;* HSI localiser and glide slope vars
+;------------------------------------
+
+LOCAL_X		EQU	95		;localiser needle origin
+LOCAL_Y		EQU	184
+
+LocalXPos	DW	LOCAL_X		;localiser x pos
+
+GLIDE_X		EQU	78		;glide slope needle origin
+GLIDE_Y		EQU	186
+
+GlideYPos	DB	GLIDE_Y		;glide slope y pos
+
+		EVEN
+
+;-----------------------------
+;* meter dial co-ords (size 3)
+;-----------------------------
+
+DialXY3		LABEL	BYTE
+
+		DB	  0, -12	;0
+		DB	  1, -12	;1
+		DB	  2, -12	;2
+		DB	  3, -12	;3
+		DB	  4, -12	;4
+		DB	  5, -11	;5
+		DB	  6, -11	;6
+		DB	  7, -11	;7
+		DB	  8, -10	;8
+		DB	  9, -10	;9
+		DB	 10,  -9	;10
+		DB	 11,  -8	;11
+		DB	 12,  -7	;12
+		DB	 13,  -6	;13
+		DB	 14,  -5	;14
+		DB	 14,  -4	;15
+		DB	 15,  -3	;16
+		DB	 15,  -2	;17
+		DB	 15,  -1	;18
+		DB	 15,   0	;19
+		DB	 15,   1	;20
+		DB	 15,   2	;21
+		DB	 15,   3	;22
+		DB	 14,   4	;23
+		DB	 14,   5	;24
+		DB	 13,   6	;25
+		DB	 12,   7	;26
+		DB	 11,   8	;27
+		DB	 10,   9	;28
+		DB	  9,  10	;29
+		DB	  8,  10	;30
+		DB	  7,  11	;31
+		DB	  6,  11	;32
+		DB	  5,  11	;33
+		DB	  4,  12	;34
+		DB	  3,  12	;35 
+		DB	  2,  12	;36
+		DB	  1,  12	;37
+		DB	  0,  12	;38
+		DB	 -1,  12	;39
+		DB	 -2,  12	;40
+		DB	 -3,  12	;41 
+		DB	 -4,  12	;42
+		DB	 -5,  11	;43
+		DB	 -6,  11	;44
+		DB	 -7,  11	;45
+		DB	 -8,  10	;46
+		DB	 -9,  10	;47
+		DB	-10,   9	;48
+		DB	-11,   8	;49
+		DB	-12,   7	;50
+		DB	-13,   6	;51
+		DB	-14,   5	;52
+		DB	-14,   4	;53
+		DB	-15,   3	;54
+		DB	-15,   2	;55
+		DB	-15,   1	;56
+		DB	-15,   0	;57
+		DB	-15,  -1	;58
+		DB	-15,  -2	;59
+		DB	-15,  -3	;60
+		DB	-14,  -4	;61
+		DB	-14,  -5	;62
+		DB	-13,  -6	;63
+		DB	-12,  -7	;64
+		DB	-11,  -8	;65
+		DB	-10,  -9	;66
+		DB	 -9, -10	;67
+		DB	 -8, -10	;68
+		DB	 -7, -11	;69
+		DB	 -6, -11	;70
+		DB	 -5, -11	;71
+		DB	 -4, -12	;72
+		DB	 -3, -12	;73
+		DB	 -2, -12	;74
+		DB	 -1, -12	;75
+		DB	  0, -12	;76 <<<<< first co-ord repeated <<<<<
+
+
+		
 ;----------
 ;* TAB size
 ;----------
 
-TAB_WIDTH	EQU	96
-TAB_DEPTH	EQU	72
+TAB_WIDTH	EQU	96 ;96
+TAB_DEPTH	EQU	72 ;72
+TAB_WIDTH_TIALD	EQU	320
+TAB_DEPTH_TIALD	EQU	192
+
+;TIALD Original - offset compensation
+OFFSETTIALD EQU 8
 
 XC		EQU	TAB_WIDTH/2	;centre x
-YC		EQU	TAB_DEPTH/2-1	;centre y
+;YC		EQU	TAB_DEPTH/2-1	;centre y
+YC		EQU	(TAB_DEPTH/2-1)+OFFSETTIALD	;centre y
+
+XC_TIALD		EQU	TAB_WIDTH_TIALD/2	;centre x
+;YC_TIALD		EQU	TAB_DEPTH_TIALD/2-1	;centre y
+
+;centre y  - modified by Frankie on 21/5/2018 to compensate for the code
+;mov TIALD_VIEW.VP_PITCH,400 on line 2890
+YC_TIALD		EQU	(TAB_DEPTH_TIALD/2-1)+25 
+
+
+
+
+;Value 25 means move the crosshairs 25 pixels down south
 
 ;------------
 ;* TAB origin
@@ -162,6 +365,9 @@ YC		EQU	TAB_DEPTH/2-1	;centre y
 
 XOrg		DW	0
 YOrg		DB	0,0
+
+XOrg_TIALD		DW	0
+YOrg_TIALD		DB	0,0
 
 ;------------------
 ;* TAB display data
@@ -176,48 +382,48 @@ YOrg		DB	0,0
 
 TABPtr		DW	OFFSET TAB1
 
-TAB1	    	TAB	<16,26,1,TAB_PLN,OFFSET SSF_TAB1,0,0>
-
-TAB2		TAB	<208,26,1,TAB_FLIR,OFFSET SSF_TAB2,0,0>
+TAB1	    TAB	<16,26,1,TAB_PLN,OFFSET SSF_TAB1,0,0>
+TAB2		TAB	<208,26,1,TAB_REF,OFFSET SSF_TAB2,0,0> ;hacked by Frankie 25/11/2017
 
 ;----------------------
 ;* mouse required flags
 ;----------------------
-
 TABMouseFlags	DB	0	;TAB_PLN
 		DB	0	;TAB_MAP
 		DB	1	;TAB_REF
-		DB	0	;TAB_FLIR
-		DB	1	;TAB_TIALD
-		DB	0	;TAB_RADAR
-
+		DB	0	;TAB_FLIR  (original)
+		DB	0	;TAB_FLIR  (full-screen)						
+		DB	1	;TAB_TIALD (original)
+		DB	1	;TAB_TIALD (full-screen)		
+		DB	0	;TAB_RADAR		
 		EVEN
-
 ;-------------------
 ;* TAB select switch
 ;-------------------
-
 ;* note: At least two displays must always be available (unconditional).
-
 SelectSwitch	DW	SelectModeOk	;TAB_PLN
-		DW	SelectMap	;TAB_MAP
-		DW	SelectModeOk	;TAB_REF
-		DW	SelectModeOk	;TAB_FLIR
-		DW	SelectTIALD	;TAB_TIALD
-		DW	SelectRadar	;TAB_RADAR
-		DW	SelectLoopBack	;TAB_LOOPBACK
-
+		DW	SelectMap	  ;TAB_MAP
+		DW	SelectModeOk  ;TAB_REF
+		DW	SelectModeOk  ;TAB_FLIR  (original)
+		DW	SelectModeOk  ;TAB_FLIR  (full-screen)			
+		DW	SelectTIALD	  ;TAB_TIALD (original)
+		DW	SelectTIALD	  ;TAB_TIALD (full-screen)
+		DW	SelectRadar	  ;TAB_RADAR
+		DW	SelectLoopBack;TAB_LOOPBACK
+				
 ;-------------------------
 ;* TAB display mode switch
 ;-------------------------
+DispSwitch	DW	RoutePlanDisp ;TAB_PLN
+		DW	MapDisp		  ;TAB_MAP
+		DW	RefDisp		  ;TAB_REF
+		DW	FLIRDisp_Ori  ;TAB_FLIR  (original)
+		DW	FLIRDisp	  ;TAB_FLIR	 (full-screen)			
+		DW	TIALDDisp_Ori ;TAB_TIALD (original)
+		DW	TIALDDisp	  ;TAB_TIALD (full-screen)	
+		DW	RadarDisp	  ;TAB_RADAR
 
-DispSwitch	DW	RoutePlanDisp	;TAB_PLN
-		DW	MapDisp		;TAB_MAP
-		DW	RefDisp		;TAB_REF
-		DW	FLIRDisp	;TAB_FLIR
-		DW	TIALDDisp	;TAB_TIALD
-		DW	RadarDisp	;TAB_RADAR
-
+		
 ;--------------------------
 ;* general purpose viewport
 ;--------------------------
@@ -303,6 +509,18 @@ TDSwitch	DW	TIALDInit	;TIALD_INIT
 		DW	TIALDAdjustLock	;TIALD_ADJ_LOCK
 		DW	TIALDTargetLock	;TIALD_TGT_LOCK
 
+TDSwitch_Ori	DW	TIALDInit_Ori	;TIALD_INIT
+		DW	TIALDSearch_Ori	;TIALD_SEARCH
+		DW	TIALDZoom_Ori	;TIALD_ZOOM
+		DW	TIALDAdjustLock_Ori	;TIALD_ADJ_LOCK
+		DW	TIALDTargetLock_Ori	;TIALD_TGT_LOCK		
+
+TDSwitch_Ori2	DW	TIALDInit_Ori2	;TIALD_INIT
+		DW	TIALDSearch_Ori2	;TIALD_SEARCH
+		DW	TIALDZoom_Ori2	;TIALD_ZOOM
+		DW	TIALDAdjustLock_Ori2	;TIALD_ADJ_LOCK
+		DW	TIALDTargetLock_Ori2	;TIALD_TGT_LOCK		
+		
 ;* symbology switch
 
 TDSymbolSwitch	DW	TDSymOk		;TIALD_INIT
@@ -311,6 +529,18 @@ TDSymbolSwitch	DW	TDSymOk		;TIALD_INIT
 		DW	TDSymAdjustLock	;TIALD_ADJ_LOCK
 		DW	TDSymTargetLock	;TIALD_TGT_LOCK
 
+TDSymbolSwitch_Ori	DW	TDSymOk		;TIALD_INIT
+		DW	TDSymOk_Ori		;TIALD_SEARCH
+		DW	TDSymZoom_Ori	;TIALD_ZOOM
+		DW	TDSymAdjustLock_Ori	;TIALD_ADJ_LOCK
+		DW	TDSymTargetLock_Ori	;TIALD_TGT_LOCK
+
+TDSymbolSwitch_Ori2	DW	TDSymOk		;TIALD_INIT
+		DW	TDSymOk_Ori2		;TIALD_SEARCH
+		DW	TDSymZoom_Ori2	;TIALD_ZOOM
+		DW	TDSymAdjustLock_Ori2	;TIALD_ADJ_LOCK
+		DW	TDSymTargetLock_Ori2	;TIALD_TGT_LOCK
+		
 ;---------------
 ;* reference map
 ;---------------
@@ -366,7 +596,8 @@ WPBrg$		LABEL	BYTE
 
 WPETA$		LABEL	BYTE
 		PV_XY	XOrg,YOrg
-		PD_XYMV	4,66
+		;PD_XYMV	4,66
+		PD_XYMV	4,56
 		PV_ETA	WPETA
 		P_END
 
@@ -391,7 +622,6 @@ WPETAInvalid$	LABEL	BYTE
 ;----------------------------------
 ;* reference map statistics strings
 ;----------------------------------
-
 RefMap$ 	LABEL	BYTE
 		P_OVER1
 		P_CHAR2
@@ -409,6 +639,23 @@ RefMap$ 	LABEL	BYTE
 		PV_PDEG	RefBrg
 		P_END
 
+RefMap_COL_HUD$ LABEL	BYTE
+		P_OVER1
+		P_CHAR2
+		PD_VGA	COL_HUD,COL_HUD
+		PV_XY	XOrg,YOrg
+		PD_XYMV	4,1
+		P_DECAT	00100011b	;(unsigned, 3 digits, leading zeroes)
+		PV_DECW	DispHdg
+		P_DECAT	00000000b	;(default)
+		PV_XY	XOrg,YOrg
+		PD_XYMV	72,66
+		PV_RNG	RefRngNMiles
+		PV_XY	XOrg,YOrg
+		PD_XYMV	80,1
+		PV_PDEG	RefBrg
+		P_END
+		
 RefETA$		LABEL	BYTE
 		PV_XY	XOrg,YOrg
 		PD_XYMV	4,66
@@ -437,6 +684,10 @@ PANCODE		SEGMENT BYTE PUBLIC 'CODE'
 		ASSUME CS:PANCODE
 		ASSUME DS:DATA
 
+mov	si,OFFSET SetUp$
+call	Print$
+
+		
 ;* UpdateTAB
 ;* UpdateTAB1 - update lhs TAB display
 ;* UpdateTAB2 - update rhs TAB display
@@ -446,17 +697,15 @@ PANCODE		SEGMENT BYTE PUBLIC 'CODE'
 ;* kill: assume all
 
 UpdateTAB1	LABEL	NEAR
-
 		mov	si,OFFSET TAB1	;this TAB display
 		mov	di,OFFSET TAB2	;other TAB display
-
 ;* update key flags
 
 		mov	al,KF_TAB1Select
 		mov	TAB_SELECT[si],al
 		mov	al,KF_TAB1Toggle
 		mov	TAB_TOGGLE[si],al
-
+;DontDoAnything:
 		jmp	UpdateTAB
 
 UpdateTAB2	LABEL	NEAR
@@ -470,7 +719,8 @@ UpdateTAB2	LABEL	NEAR
 		mov	TAB_SELECT[si],al
 		mov	al,KF_TAB2Toggle
 		mov	TAB_TOGGLE[si],al
-
+		jmp	UpdateTAB
+;@@:
 UpdateTAB	PROC	NEAR
 
 ;-----------------
@@ -520,9 +770,9 @@ UpdateTAB	PROC	NEAR
 		test	BYTE PTR [bx],1
 		_JNZ	Damaged
 
-;--------------------------------------------------
+;---------------------------------------------------------------------------
 ;* test for mode confliction with other TAB display (ie. when just turned on)
-;--------------------------------------------------
+;---------------------------------------------------------------------------
 
 		mov	bp,-1			;assume off or damaged
 
@@ -567,12 +817,77 @@ ContSelect:	mov	bx,TAB_MODE[si]
 		test	TAB_SELECT[si],1	;select mode?
 		jz	SortMode		;no ->
 
-SelectNext:	add	bx,2
+SelectNext:	
+        add	bx,2
 		
 		cmp	bx,bp		;same mode as other TAB display?
 		je	SelectNext	;yes, skip same mode ->
 
-		jmp	SelectSwitch[bx]
+;-------------------------------------------------------------------------------------------------------
+; This section was written by Frankie Kam on 17 December 2017
+; This switch-case like construct is to avoid the Tab1 and Tab2 from showing up in these combinations:		
+; TAB1               TAB2
+; ====               ====
+; FLIR               FLIR full-screen
+; FLIR full-screen   FLIR 
+; TIALD              TIALD full-screen
+; TIALD full-screen  TIALD 		
+;
+; Refer to Line 353 (reproduced below)
+;
+; SelectSwitch	DW	SelectModeOk	;TAB_PLN
+;		DW	SelectMap	  ;TAB_MAP
+;		DW	SelectModeOk  ;TAB_REF
+;		DW	SelectModeOk  ;TAB_FLIR  (original)
+;		DW	SelectTIALD	  ;TAB_TIALD (original)
+;		DW	SelectModeOk  ;TAB_FLIR  (full-screen)	
+;		DW	SelectTIALD	  ;TAB_TIALD (full-screen)
+;		DW	SelectRadar	  ;TAB_RADAR
+;		DW	SelectLoopBack;TAB_LOOPBACK
+;---------------------------------------------------------------------------------------------------------
+
+		cmp bx,TAB_FLIR_ORI ;10
+        jne NextCondition3
+		cmp bp,TAB_FLIR ;6
+		je	SelectNext
+NextCondition3:
+		cmp bx,TAB_FLIR ;6
+        jne NextCondition4
+		cmp bp,TAB_FLIR_ORI ;10
+		je	SelectNext
+NextCondition4:
+		cmp bx,TAB_TIALD ;8
+        jne NextCondition5
+		cmp bp,TAB_TIALD_ORI;12
+		je	SelectNext
+NextCondition5:
+		cmp bx,TAB_TIALD_ORI ;12
+        jne GoAheadSelect
+		cmp bp,TAB_TIALD ;8
+		je	SelectNext
+GoAheadSelect:	
+        ;Show full-screen FLIR and TIALDS only if the /fs flag is used. For example, C:\>TORNADO /fs
+        cmp FullScreen,1
+		_JE GetOutHere
+        cmp bx,TAB_FLIR_ORI ;6
+		jne CheckTab
+		add bx, 4
+		jmp GetOutHere
+CheckTab:	
+        cmp bx,TAB_TIALD_ORI ;6
+        jne CheckTab2
+		add bx, 2
+		jmp GetOutHere		
+CheckTab2:			
+        cmp bp,TAB_FLIR_ORI ;6
+	    jne CheckTab3
+		add bp, 4	
+CheckTab3:					
+        cmp bp,TAB_TIALD_ORI ;6
+	    jne GetOutHere
+		add bp, 2
+GetOutHere:
+		jmp	SelectSwitch[bx] 
 
 ;* only select TAB_MAP if moving map not displayed on Nav's MFD
 
@@ -592,7 +907,8 @@ SelectMap:	cmp	NAVIG_MFD.MFD_MODE,MFD_MAP	;moving map selected?
 
 ;* do not select TAB_TIALD if ADV (IDS / ECR only)
 
-SelectTIALD:	cmp	TornadoType,ADV_TORNADO
+SelectTIALD:	
+        cmp	TornadoType,ADV_TORNADO
 		je	SelectNext
 
 		jmp	SelectModeOk
@@ -778,6 +1094,10 @@ SkipPixel:	pop	cx
 
 RoutePlanDisp	PROC	NEAR
 
+;		test	QuieterCockpit,1	;in cockpit?
+;		jnz @F ;->yes
+;		jmp GoOverHereMann2
+;@@:	
 		call	ClearDisp
 
 ;-----------------
@@ -961,6 +1281,11 @@ ContPLNScale:	sub	ah,al		;Dx = x max - x min
 ;*    x += 1k
 ;* next vline
 
+;		test	QuieterCockpit,1	;in cockpit?
+;		jnz @F ;->yes
+;		jmp GoOverHereMann3
+;@@:	
+
 		mov	ax,PLNXCentre
 		and	ax,00300h
 		add	ax,5120
@@ -1039,6 +1364,7 @@ YGridLoop:	push	ax
 
 		loop	YGridLoop
 
+;GoOverHereMann3:
 ;-----------------
 ;* draw route legs (if visible)
 ;-----------------
@@ -1394,8 +1720,16 @@ SkipZoomOut:	KTEST	KF_MapOrigin
 ;----------
 
 @@:		mov	ax,MAP_TAB_DISP
+
+        cmp	CrewMode,CREW_NAVIG
+        jne @F		
 		mov	cx,XOrg
 		mov	bl,YOrg
+		jmp Conthere
+@@:		
+        mov	cx,0
+		mov	bl,0
+Conthere:
 		xor	bh,bh
 		mov	dx,MapZoom
 		mov	bp,MapOrigin
@@ -1421,7 +1755,14 @@ SkipZoomOut:	KTEST	KF_MapOrigin
 		mov	si,WPPtr
 		mov	dl,[si].WP_ID
 
+		;mov	al,COL_MAP_SYM
+		cmp NVG_set,1
+		je setcolourhudd1
 		mov	al,COL_MAP_SYM
+		jmp zxs1
+setcolourhudd1:		
+		mov	al,COL_HUD
+zxs1:			
 
 		call	CharSprite
 
@@ -1429,9 +1770,18 @@ SkipZoomOut:	KTEST	KF_MapOrigin
 ;* draw hdg datum (wrt origin)
 ;----------------
 
-@@:		mov	cx,XOrg
+@@:		
+        cmp	CrewMode,CREW_NAVIG
+        jne @F		
+        mov	cx,XOrg
 		add	cx,XC
 		mov	bl,YOrg
+		jmp Conthere2
+@@:		
+        mov	cx,0
+		add	cx,XC
+		mov	bl,0
+Conthere2:
 
 		mov	dx,TAB_DEPTH/2	;assume MAP_ORG_BASE
 
@@ -1443,7 +1793,16 @@ SkipZoomOut:	KTEST	KF_MapOrigin
 @@:		push	bx
 		push	cx
 		push	dx
+		
+		;mov	al,COL_MAP_SYM
+		cmp NVG_set,1
+		je setcolourhudd2
 		mov	al,COL_MAP_SYM
+		jmp zxs2
+setcolourhudd2:		
+		mov	al,COL_HUD
+zxs2:					
+		
 		call	SetPixel
 		pop	dx
 		pop	cx
@@ -1457,14 +1816,29 @@ SkipZoomOut:	KTEST	KF_MapOrigin
 
 		push	bx
 		push	cx
+		
+		;mov	al,COL_MAP_SYM
+		cmp NVG_set,1
+		je setcolourhudd3
 		mov	al,COL_MAP_SYM
+		jmp zxs3
+setcolourhudd3:		
+		mov	al,COL_HUD
+zxs3:					
 		call	SetPixel
 		pop	cx
 		pop	bx
 	
 		add	cx,2
 
+		;mov	al,COL_MAP_SYM
+		cmp NVG_set,1
+		je setcolourhudd4
 		mov	al,COL_MAP_SYM
+		jmp zxs4
+setcolourhudd4:		
+		mov	al,COL_HUD
+zxs4:					
 		call	SetPixel
 
 		ret
@@ -1513,9 +1887,13 @@ RefDisp		PROC	NEAR
 		cmp	DisableInput,0	;input disabled?
 		_JNE	DrawRefMap	;yes ->
 
+		test	QuieterCockpit,1	;in cockpit?
+		jnz @F ;->yes
+		jmp GoOverHereMann		
+@@:		
 		test	[si].TAB_HAS_MOUSE,1	;mouse available?
 		_JZ	DrawRefMap		;no ->
-
+GoOverHereMann:
 		call	ReadMouseMotion
 
 ;* note: al = 1 = lhs button pressed
@@ -1788,7 +2166,9 @@ DrawRefMap:	mov	ax,M_VIEW.VP_HDG	;update hdg
 		_JE	SkipWPSymbol	;no ->
 		cmp	bx,-1		;y valid?
 		_JE	SkipWPSymbol	;no ->
-
+		
+		cmp NVG_set,1
+		je putcolorhud1
 		PLOTSYM	 0, -4, COL_REF_SYM
 		PLOTSYM	 0, -3, COL_REF_SYM
 		PLOTSYM	 0, -2, COL_REF_SYM
@@ -1800,8 +2180,22 @@ DrawRefMap:	mov	ax,M_VIEW.VP_HDG	;update hdg
 		PLOTSYM	-2,  0, COL_REF_SYM
 		PLOTSYM	 2,  0, COL_REF_SYM
 		PLOTSYM	 3,  0, COL_REF_SYM
-		PLOTSYM	 4,  0, COL_REF_SYM
-
+		PLOTSYM	 4,  0, COL_REF_SYM		
+		jmp getout1
+putcolorhud1:		
+		PLOTSYM	 0, -4, COL_HUD
+		PLOTSYM	 0, -3, COL_HUD
+		PLOTSYM	 0, -2, COL_HUD
+		PLOTSYM	 0,  2, COL_HUD
+		PLOTSYM	 0,  3, COL_HUD
+		PLOTSYM	 0,  4, COL_HUD
+		PLOTSYM	-4,  0, COL_HUD
+		PLOTSYM	-3,  0, COL_HUD
+		PLOTSYM	-2,  0, COL_HUD
+		PLOTSYM	 2,  0, COL_HUD
+		PLOTSYM	 3,  0, COL_HUD
+		PLOTSYM	 4,  0, COL_HUD		
+getout1:			
 ;----------------------------
 ;* draw aircraft datum symbol (if visible)
 ;----------------------------
@@ -1813,7 +2207,9 @@ SkipWPSymbol:	mov	cx,ACDatumX
 		_JE	SkipACSymbol	;no ->
 		cmp	bx,-1		;y valid?
 		_JE	SkipACSymbol	;no ->
-
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+		cmp NVG_set,1
+		je putcolorhud2
 		PLOTSYM	 0, -3, COL_REF_SYM
 		PLOTSYM	 0, -2, COL_REF_SYM
 		PLOTSYM	 0, -1, COL_REF_SYM
@@ -1832,6 +2228,28 @@ SkipWPSymbol:	mov	cx,ACDatumX
 		PLOTSYM	-1,  2, COL_REF_SYM
 		PLOTSYM	 1,  2, COL_REF_SYM
 
+		jmp getout2
+putcolorhud2:		
+		PLOTSYM	 0, -3, COL_HUD
+		PLOTSYM	 0, -2, COL_HUD
+		PLOTSYM	 0, -1, COL_HUD
+		PLOTSYM	 0,  0, COL_HUD
+		PLOTSYM	 0,  1, COL_HUD
+		PLOTSYM	 0,  2, COL_HUD
+		PLOTSYM	 0,  3, COL_HUD
+
+		PLOTSYM	-3, -1, COL_HUD
+		PLOTSYM	-2, -1, COL_HUD
+		PLOTSYM	-1, -1, COL_HUD
+		PLOTSYM	 1, -1, COL_HUD
+		PLOTSYM	 2, -1, COL_HUD
+		PLOTSYM	 3, -1, COL_HUD
+
+		PLOTSYM	-1,  2, COL_HUD
+		PLOTSYM	 1,  2, COL_HUD	
+getout2:			
+		
+		;;;;;;;;;;;;;;;;;;;;
 ;------------------------
 ;* draw designator symbol
 ;------------------------
@@ -1849,7 +2267,9 @@ SkipACSymbol:	test	RefDesignated,1	;just designated?
 
 @@:		mov	cx,RefDesX
 		mov	bx,RefDesY
-
+		
+		cmp NVG_set,1
+		je putcolorhud3
 		PLOTSYM	 0, -2, COL_REF_SYM
 		PLOTSYM	 0, -1, COL_REF_SYM
 		PLOTSYM	 0,  1, COL_REF_SYM
@@ -1858,7 +2278,17 @@ SkipACSymbol:	test	RefDesignated,1	;just designated?
 		PLOTSYM	-1,  0,COL_REF_SYM
 		PLOTSYM	 1,  0,COL_REF_SYM
 		PLOTSYM	 2,  0,COL_REF_SYM
-
+		jmp getout3
+putcolorhud3:
+		PLOTSYM	 0, -2, COL_HUD
+		PLOTSYM	 0, -1, COL_HUD
+		PLOTSYM	 0,  1, COL_HUD
+		PLOTSYM	 0,  2, COL_HUD
+		PLOTSYM	-2,  0,COL_HUD
+		PLOTSYM	-1,  0,COL_HUD
+		PLOTSYM	 1,  0,COL_HUD
+		PLOTSYM	 2,  0,COL_HUD		
+getout3:
 ;------------------------------------------------------
 ;* display map datum range, bearing etc. (from Tornado)
 ;------------------------------------------------------
@@ -1902,7 +2332,14 @@ SkipACSymbol:	test	RefDesignated,1	;just designated?
 
 		mov	RefETA,ax
 
-@@:		mov	si,OFFSET RefMap$
+@@:		
+		cmp NVG_set,1
+		je putcolorhud4        
+		mov	si,OFFSET RefMap$
+putcolorhud4:		
+        mov	si,OFFSET RefMap_COL_HUD$
+		jmp getout4
+getout4:		
 		call	Print$
 
 		mov	si,OFFSET RefETA$	;assume ETA valid
@@ -2038,30 +2475,54 @@ FailSnapGnd:	clc			;cf = 0
 SnapGndObject	ENDP
 
 ;----------------------------------------------------------------------------
-
-;* FLIRDisp - forward looking infra-red display
+;* FLIRDisp - forward looking infra-red  (FULL-SCREEN)
 ;*
 ;* pass: si -> TAB data block
 ;* ret : nothing
 ;* kill: assume all
 
 FLIRDisp 	PROC	NEAR
-
-		mov	ax,TV3_VIEWMODE	;set viewmode for TAB
+        mov InCockpit,1
+        ;Mod 43 by Frankie Kam on 18/3/2018
+		KTEST	KF_NavigViewWithCtrl
+		jz	@F	
+		KCLEAR	KF_NavigViewWithCtrl
+        sub bx, 2 ;Pointer skips to previous TAB display, i.e., TIALD normal-sized view
+        jmp	SelectSwitch[bx]	
+		ret
+@@:
+		mov	TAB1.TAB_X_ORG,0  ;Awesome! Frankie hack on 27/11/17
+		mov	TAB1.TAB_Y_ORG,0  
+		mov	TAB2.TAB_X_ORG,220
+		mov	TAB2.TAB_Y_ORG,0  
+		mov	NAVIG_MFD.MFD_X_ORG,0
+		mov	NAVIG_MFD.MFD_Y_ORG,0  
+				
+		mov	ax,EXT_VIEWMODE
+		;mov	ax,TV3_VIEWMODE
+		
+		mov	IronWork,0 ;hacked by Frankie 30/11/2017
 		mov	cx,XOrg
 		mov	bl,YOrg
 		call	SetViewMode
-
 		COPY_VP	TMP_VIEW,M_VIEW
-
 		add	WORD PTR TMP_VIEW.VP_ZFT_LO,8	;add zft displacement
 		adc	WORD PTR TMP_VIEW.VP_ZFT_HI,0
-
 		call	DrawIRImage
-
 		mov	ax,NUL_VIEWMODE	;set viewmode for navig view
 		call	SetViewMode	
-
+        call LoadExtrnPan  ;added on 6/11/2017
+		call UpdateExtrn   ;added on 6/11/2017
+	
+		cmp	TAB2.TAB_MODE,TAB_FLIR	;TAB2's FLIR selected?
+        je BypassEScope2 ;yes ->  		
+        call UpdateEScope2
+		call UpdateRWR		
+		call UpdateADI2		
+BypassEScope2:
+        call UpdateHUD2
+		call UpdateCtrlSFace		
+        mov	IronWork,1
 		ret
 
 FLIRDisp	ENDP
@@ -2117,8 +2578,7 @@ ValidateExit:	mov	TIALDActive,0
 ValidateTIALD	ENDP
 
 ;----------------------------------------------------------------------------
-
-;* TIALDDisp - thermal image and laser designation display
+;* TIALDDisp - thermal image and laser designation display (FULL-SCREEN)
 ;*
 ;* pass: si -> TAB data block
 ;* ret : nothing
@@ -2143,12 +2603,24 @@ ValidateTIALD	ENDP
 ;*
 ;*	 It is not possible to designate outside of the active map area.
 
-TIALDDisp	PROC	NEAR
 
+
+TIALDDisp	PROC	NEAR
+        ;Mod 43 by Frankie Kam on 18/3/2018
+		mov InCockpit,1
+		KTEST	KF_NavigViewWithCtrl
+		jz	@F	
+		KCLEAR	KF_NavigViewWithCtrl
+        sub bx, 2 ;Pointer skips to previous TAB display, i.e., TIALD normal-sized view0
+		jmp	SelectSwitch[bx]
+		ret		
+@@:
 ;----------------------------
 ;* check operating conditions
 ;----------------------------
-
+        ;Bingo
+		;cmp	TAB2.TAB_MODE,TAB_FLIR_ORI
+	    ;je @F
 		cmp	M_CosP,16384	;pitch in limits (+/-60degs)?
 		jl	@F		;no ->
 
@@ -2157,18 +2629,41 @@ TIALDDisp	PROC	NEAR
 
 		cmp	TrueRadAlt,MIN_OP_RAD_ALT	;rad alt ok?
 		jae	TIALDOk				;no ->
-
+        
 @@:		mov	TDMode,TIALD_INIT
 
-		call	InvalidDisp
-
+		call InvalidDisp
+		cmp	TAB1.TAB_MODE,TAB_FLIR_ORI
+		je @F
+		call VGA_DrwNavigPanBrief
+@@:		
+		cmp	TAB1.TAB_MODE,TAB_FLIR_ORI
+		je @F
+		cmp	TAB1.TAB_MODE,TAB_TIALD_ORI
+		je @F		
+		cmp	TAB2.TAB_MODE,TAB_FLIR_ORI
+		je @F
+		cmp	TAB2.TAB_MODE,TAB_TIALD_ORI
+		je @F				
+		call DrawADIRollBug	
+@@:		
 		jmp	TIALDExit
 
 ;---------------
 ;* init viewmode
 ;---------------
 
-TIALDOk:	mov	ax,TV3_VIEWMODE
+TIALDOk:	
+		call LoadExtrnPan   ;added on 17/11/17
+		call UpdateExtrn    ;added on 17/11/17
+		mov	TAB1.TAB_X_ORG,0  ;Awesome! Frankie hack on 27/11/17
+		mov	TAB1.TAB_Y_ORG,0  
+		mov	TAB2.TAB_X_ORG,220
+		mov	TAB2.TAB_Y_ORG,0  
+		mov	NAVIG_MFD.MFD_X_ORG,0
+		mov	NAVIG_MFD.MFD_Y_ORG,0  
+		mov	ax,EXT_VIEWMODE
+		;mov	ax,TV3_VIEWMODE
 		mov	cx,XOrg
 		mov	bl,YOrg
 		call	SetViewMode
@@ -2193,15 +2688,19 @@ TIALDOk:	mov	ax,TV3_VIEWMODE
 
 ;* if night or foggy use IR visual colours
 
+		cmp	Night,1		;Dusk (still light enough to see)?
+		je	SkipIRCols	;no ->
+		
 		cmp	Night,0		;night?
 		jne	@F		;yes ->
 
 		cmp	Fog,0		;foggy?
 		je	SkipIRCols	;no ->
 
-@@:		call	SetIRPalette
+@@:		;call CheckForNVG
+        ;call	SetIRPalette
 
-		mov	StarsEnabled,0
+		;mov	StarsEnabled,0
 
 SkipIRCols:	mov	GradEnabled,0
 		mov	CloudsEnabled,0
@@ -2550,8 +3049,9 @@ SetVPAlt:	mov	WORD PTR TIALD_VIEW.VP_ZFT_HI,cx
 
 ;* pitched down, no roll
 
-		mov	TIALD_VIEW.VP_PITCH,384
-		mov	TIALD_VIEW.VP_ROLL,0
+		;mov	TIALD_VIEW.VP_PITCH,384
+		mov	TIALD_VIEW.VP_PITCH,400 ;390    ;hacked to 394 by Frankie on 24/11/2017; 388 seems best
+		;mov	TIALD_VIEW.VP_ROLL,0   ;hacked by Frankie on 24/11/2017
 		
 		mov	si,OFFSET TIALD_VIEW
 		call	Visual
@@ -2651,7 +3151,8 @@ TDSymOk		LABEL	NEAR
 		cmp	Fog,0		;foggy?
 		je	SkipFixCols	;no ->
 
-@@:		call	FixIRPalette
+@@:		;call CheckForNVG
+        ;call	FixIRPalette
 
 ;------------------
 ;* restore viewmode
@@ -2664,7 +3165,10 @@ SkipFixCols:	mov	ax,NUL_VIEWMODE
 ;* update TIALD flags
 ;--------------------
 
-TIALDExit:	mov	al,1		;assume active
+TIALDExit:	
+        cmp	TrueRadAlt,MIN_OP_RAD_ALT	;rad alt ok?
+		jl BypassEScope_and_ADI
+        mov	al,1		;assume active
 
 		cmp	TDMode,TIALD_ADJ_LOCK
 		je	@F		
@@ -2676,7 +3180,22 @@ TIALDExit:	mov	al,1		;assume active
 @@:		mov	LaserActive,al
 
 		mov	TIALDActive,1
-
+		cmp	TAB2.TAB_MODE,TAB_TIALD	;TAB2's TIALD display selected?
+        je BypassEScope ;yes ->  
+		
+		;cmp	TAB2.TAB_MODE,TAB_FLIR_ORI
+	    ;je @F
+		;Don't show the EScope and ADI gauges if TIALD is broken because past the pitch threshold of +/-60degs!
+        cmp	M_CosP,16384	;pitch in limits (+/-60degs)?
+		jl	BypassEScope_and_ADI		;no ->
+		cmp	M_CosR,16384	;roll in limits (+/-60degs)?
+		jl	BypassEScope_and_ADI		
+		call UpdateEScope2
+BypassEScope:		
+;ExitTIALDOk:
+		call UpdateADI2  ;display attitude direction indicator	
+BypassEScope_and_ADI:		
+        call UpdateCtrlSFace		
 		ret
 
 TIALDDisp	ENDP
@@ -2723,127 +3242,247 @@ DrawCrossSymbol	PROC	NEAR
 		test	TDCross,1
 		_JZ	SkipCross
 
-		mov	bl,YOrg
-		add	bl,YC
-		mov	cx,XOrg
+		;* HLineDraw - draw horizontal line between two points
+        ;*
+        ;* pass: al = logical colour
+        ;*       bl = y1
+        ;*       cx = x1
+        ;*       dx = x2
+        ;* ret : nothing
+		
+		;Top left horizontal
+		mov	bl,YOrg_TIALD
+		add	bl,YC_TIALD-40
+		mov	cx,XOrg_TIALD
 		mov	dx,cx
-		add	cx,XC-4
-		add	dx,XC-2
-		mov	al,COL_TIALD_SYM
+		add	cx,XC_TIALD-53 ;-60
+		add	dx,XC_TIALD-49
+		mov	al,COL_HUD ;darker grey than COL_GREY1
 		call	HLineDraw
-	
-		mov	bl,YOrg
-		add	bl,YC
-		mov	cx,XOrg
+
+		;Top right horizontal
+		mov	bl,YOrg_TIALD
+		add	bl,YC_TIALD-40
+		mov	cx,XOrg_TIALD
 		mov	dx,cx
-		add	cx,XC+2
-		add	dx,XC+4
-		mov	al,COL_TIALD_SYM
-		call	HLineDraw
-	
-		mov	bl,YOrg
+		add	cx,XC_TIALD+53
+		add	dx,XC_TIALD+49
+		mov	al,COL_HUD
+		call	HLineDraw		
+		
+		
+		;* VLineDraw - draw vertical line between two points
+		;*
+		;* pass: al = logical colour
+		;*       bl = y1
+		;*       bh = y2
+		;*       cx = x1	
+		
+		;Top left vertical
+		mov	bl,YOrg_TIALD
 		mov	bh,bl
-		add	bl,YC-4
-		add	bh,YC-2
-		mov	cx,XOrg
-		add	cx,XC
-		mov	al,COL_TIALD_SYM
+		add	bl,YC_TIALD-39
+		add	bh,YC_TIALD-35
+		mov	cx,XOrg_TIALD
+		add	cx,XC_TIALD-53
+		mov	al,COL_HUD
+		call	VLineDraw
+
+		;Top right vertical
+		mov	bl,YOrg_TIALD
+		mov	bh,bl
+		add	bl,YC_TIALD-39
+		add	bh,YC_TIALD-35
+		mov	cx,XOrg_TIALD
+		add	cx,XC_TIALD+53
+		mov	al,COL_HUD
+		call	VLineDraw		
+
+
+		;* HLineDraw - draw horizontal line between two points
+        ;*
+        ;* pass: al = logical colour
+        ;*       bl = y1
+        ;*       cx = x1
+        ;*       dx = x2
+        ;* ret : nothing
+		
+        ;Bottom left horizontal		
+		mov	bl,YOrg_TIALD
+		add	bl,YC_TIALD+40
+		mov	cx,XOrg_TIALD
+		mov	dx,cx
+		add	cx,XC_TIALD-53
+		add	dx,XC_TIALD-49
+		mov	al,COL_HUD
+		call	HLineDraw
+		
+		;Bottom right horizontal	
+		mov	bl,YOrg_TIALD
+		add	bl,YC_TIALD+40
+		mov	cx,XOrg_TIALD
+		mov	dx,cx
+		add	cx,XC_TIALD+53
+		add	dx,XC_TIALD+49
+		mov	al,COL_HUD
+		call	HLineDraw
+		
+		;* VLineDraw - draw vertical line between two points
+		;*
+		;* pass: al = logical colour
+		;*       bl = y1
+		;*       bh = y2
+		;*       cx = x1	
+		
+		;Bottom left vertical
+		mov	bl,YOrg_TIALD
+		mov	bh,bl
+		add	bl,YC_TIALD+35
+		add	bh,YC_TIALD+39
+		mov	cx,XOrg_TIALD
+		add	cx,XC_TIALD-53
+		mov	al,COL_HUD
+		call	VLineDraw
+		
+		;Bottom right vertical
+		mov	bl,YOrg_TIALD
+		mov	bh,bl
+		add	bl,YC_TIALD+35
+		add	bh,YC_TIALD+39
+		mov	cx,XOrg_TIALD
+		add	cx,XC_TIALD+53
+		mov	al,COL_HUD
+		call	VLineDraw
+		
+		;------------------------------
+		
+		mov	bl,YOrg_TIALD
+		add	bl,YC_TIALD
+		mov	cx,XOrg_TIALD
+		mov	dx,cx
+		add	cx,XC_TIALD-4
+		add	dx,XC_TIALD-2
+		mov	al,COL_HUD
+		call	HLineDraw
+	
+		mov	bl,YOrg_TIALD
+		add	bl,YC_TIALD
+		mov	cx,XOrg_TIALD
+		mov	dx,cx
+		add	cx,XC_TIALD+2
+		add	dx,XC_TIALD+4
+		mov	al,COL_HUD
+		call	HLineDraw
+		
+		;* VLineDraw - draw vertical line between two points
+		;*
+		;* pass: al = logical colour
+		;*       bl = y1
+		;*       bh = y2
+		;*       cx = x1	
+		mov	bl,YOrg_TIALD
+		mov	bh,bl
+		add	bl,YC_TIALD-4
+		add	bh,YC_TIALD-2
+		mov	cx,XOrg_TIALD
+		add	cx,XC_TIALD
+		mov	al,COL_HUD
 		call	VLineDraw
 	
-		mov	bl,YOrg
+		mov	bl,YOrg_TIALD
 		mov	bh,bl
-		add	bl,YC+2
-		add	bh,YC+4
-		mov	cx,XOrg
-		add	cx,XC
-		mov	al,COL_TIALD_SYM
+		add	bl,YC_TIALD+2
+		add	bh,YC_TIALD+4
+		mov	cx,XOrg_TIALD
+		add	cx,XC_TIALD
+		mov	al,COL_HUD
 		call	VLineDraw
 
 		cmp	TDYOffset,0	;laser ahead of aircraft?
 		_JL	SkipCross	;no ->
 
-		mov	bl,YOrg
-		add	bl,YC-3
-		mov	cx,XOrg
-		add	cx,XC-4
-		mov	al,COL_TIALD_SYM
+		mov	bl,YOrg_TIALD
+		add	bl,YC_TIALD-3
+		mov	cx,XOrg_TIALD
+		add	cx,XC_TIALD-5 ;-4
+		mov	al,COL_HUD
 		call	SetPixel
 
-		mov	bl,YOrg
-		add	bl,YC-4
-		mov	cx,XOrg
-		add	cx,XC-4
-		mov	al,COL_TIALD_SYM
+		mov	bl,YOrg_TIALD
+		add	bl,YC_TIALD-4
+		mov	cx,XOrg_TIALD
+		add	cx,XC_TIALD-5 ;-4
+		mov	al,COL_HUD
 		call	SetPixel
 
-		mov	bl,YOrg
-		add	bl,YC-4
-		mov	cx,XOrg
-		add	cx,XC-3
-		mov	al,COL_TIALD_SYM
+		mov	bl,YOrg_TIALD
+		add	bl,YC_TIALD-4
+		mov	cx,XOrg_TIALD
+		add	cx,XC_TIALD-4  ;-3
+		mov	al,COL_HUD
 		call	SetPixel
 	
-		mov	bl,YOrg
-		add	bl,YC-4
-		mov	cx,XOrg
-		add	cx,XC+3
-		mov	al,COL_TIALD_SYM
+		mov	bl,YOrg_TIALD
+		add	bl,YC_TIALD-4
+		mov	cx,XOrg_TIALD
+		add	cx,XC_TIALD+4 ;+3
+		mov	al,COL_HUD
 		call	SetPixel
 
-		mov	bl,YOrg
-		add	bl,YC-4
-		mov	cx,XOrg
-		add	cx,XC+4
-		mov	al,COL_TIALD_SYM
+		mov	bl,YOrg_TIALD
+		add	bl,YC_TIALD-4
+		mov	cx,XOrg_TIALD
+		add	cx,XC_TIALD+5 ;+4
+		mov	al,COL_HUD
 		call	SetPixel
 
-		mov	bl,YOrg
-		add	bl,YC-3
-		mov	cx,XOrg
-		add	cx,XC+4
-		mov	al,COL_TIALD_SYM
+		mov	bl,YOrg_TIALD
+		add	bl,YC_TIALD-3
+		mov	cx,XOrg_TIALD
+		add	cx,XC_TIALD+5 ;+4
+		mov	al,COL_HUD
 		call	SetPixel
 
-		mov	bl,YOrg
-		add	bl,YC+3
-		mov	cx,XOrg
-		add	cx,XC+4
-		mov	al,COL_TIALD_SYM
+		mov	bl,YOrg_TIALD
+		add	bl,YC_TIALD+3
+		mov	cx,XOrg_TIALD
+		add	cx,XC_TIALD+5 ;+4
+		mov	al,COL_HUD
 		call	SetPixel
 
-		mov	bl,YOrg
-		add	bl,YC+4
-		mov	cx,XOrg
-		add	cx,XC+4
-		mov	al,COL_TIALD_SYM
+		mov	bl,YOrg_TIALD
+		add	bl,YC_TIALD+4
+		mov	cx,XOrg_TIALD
+		add	cx,XC_TIALD+5 ;+4
+		mov	al,COL_HUD
 		call	SetPixel
 
-		mov	bl,YOrg
-		add	bl,YC+4
-		mov	cx,XOrg
-		add	cx,XC+3
-		mov	al,COL_TIALD_SYM
+		mov	bl,YOrg_TIALD
+		add	bl,YC_TIALD+4
+		mov	cx,XOrg_TIALD
+		add	cx,XC_TIALD+4 ;+3
+		mov	al,COL_HUD
 		call	SetPixel
 
-		mov	bl,YOrg
-		add	bl,YC+4
-		mov	cx,XOrg
-		add	cx,XC-3
-		mov	al,COL_TIALD_SYM
+		mov	bl,YOrg_TIALD
+		add	bl,YC_TIALD+4
+		mov	cx,XOrg_TIALD
+		add	cx,XC_TIALD-4 ;-3
+		mov	al,COL_HUD
 		call	SetPixel
 
-		mov	bl,YOrg
-		add	bl,YC+4
-		mov	cx,XOrg
-		add	cx,XC-4
-		mov	al,COL_TIALD_SYM
+		mov	bl,YOrg_TIALD
+		add	bl,YC_TIALD+4
+		mov	cx,XOrg_TIALD
+		add	cx,XC_TIALD-5 ;-4
+		mov	al,COL_HUD
 		call	SetPixel
 
-		mov	bl,YOrg
-		add	bl,YC+3
-		mov	cx,XOrg
-		add	cx,XC-4
-		mov	al,COL_TIALD_SYM
+		mov	bl,YOrg_TIALD
+		add	bl,YC_TIALD+3
+		mov	cx,XOrg_TIALD
+		add	cx,XC_TIALD-5 ;-4
+		mov	al,COL_HUD
 		call	SetPixel
 
 SkipCross:	ret
@@ -2860,22 +3499,22 @@ DrawCrossSymbol	ENDP
 
 DrawLaserSymbol	PROC	NEAR
 
-		mov	bl,YOrg
+		mov	bl,YOrg_TIALD
 		mov	bh,bl
-		add	bl,YC-2
-		add	bh,YC+1
-		mov	cx,XOrg
-		add	cx,XC+6
-		mov	al,COL_TIALD_SYM
+		add	bl,YC_TIALD-2
+		add	bh,YC_TIALD+1
+		mov	cx,XOrg_TIALD
+		add	cx,XC_TIALD+6
+		mov	al,COL_HUD
 		call	VLineDraw
 
-		mov	bl,YOrg
-		add	bl,YC+2
-		mov	cx,XOrg
+		mov	bl,YOrg_TIALD
+		add	bl,YC_TIALD+2
+		mov	cx,XOrg_TIALD
 		mov	dx,cx
-		add	cx,XC+6
-		add	dx,XC+8
-		mov	al,COL_TIALD_SYM
+		add	cx,XC_TIALD+6
+		add	dx,XC_TIALD+8
+		mov	al,COL_HUD
 		call	HLineDraw
 	
 		ret
@@ -2892,22 +3531,22 @@ DrawLaserSymbol	ENDP
 
 DrawTrackSymbol	PROC	NEAR
 
-		mov	bl,YOrg
+		mov	bl,YOrg_TIALD
 		mov	bh,bl
-		add	bl,YC-1
-		add	bh,YC+2
-		mov	cx,XOrg
-		add	cx,XC-7
-		mov	al,COL_TIALD_SYM
+		add	bl,YC_TIALD-1
+		add	bh,YC_TIALD+2
+		mov	cx,XOrg_TIALD
+		add	cx,XC_TIALD-7
+		mov	al,COL_HUD
 		call	VLineDraw
 
-		mov	bl,YOrg
-		add	bl,YC-2
-		mov	cx,XOrg
+		mov	bl,YOrg_TIALD
+		add	bl,YC_TIALD-2
+		mov	cx,XOrg_TIALD
 		mov	dx,cx
-		add	cx,XC-8
-		add	dx,XC-6
-		mov	al,COL_TIALD_SYM
+		add	cx,XC_TIALD-8
+		add	dx,XC_TIALD-6
+		mov	al,COL_HUD
 		call	HLineDraw
 	
 		ret
@@ -3705,6 +4344,2383 @@ InvalidDisp	PROC	NEAR
 		ret
 
 InvalidDisp	ENDP
+
+
+;DrawStandby	PROC	NEAR
+;		
+		;mov	si,OFFSET SetUp$
+		;call	Print$
+		
+;		mov	si,OFFSET SetUp$
+;		call	Print$
+		
+;* centre dot
+
+;		mov	cx,HUD_X_ORG
+;		mov	bl,HUD_Y_ORG
+;		mov	al,COL_SIGHT
+;		call	SetPixel
+
+;* up stroke
+
+;		mov	cx,HUD_X_ORG
+;		mov	bl,HUD_Y_ORG-17
+;		mov	bh,HUD_Y_ORG-6
+;		mov	al,COL_SIGHT
+;		call	VLineDraw
+
+;		mov	cx,HUD_X_ORG-2
+;		mov	dx,HUD_X_ORG+2
+;		mov	bl,HUD_Y_ORG-18
+;		mov	al,COL_SIGHT
+;		call	HLineDraw
+
+;		mov	cx,HUD_X_ORG-2
+;		mov	dx,HUD_X_ORG+2
+;		mov	bl,HUD_Y_ORG-14
+;		mov	al,COL_SIGHT
+;		call	HLineDraw
+
+;		mov	cx,HUD_X_ORG-3
+;		mov	dx,HUD_X_ORG+3
+;		mov	bl,HUD_Y_ORG-10
+;		mov	al,COL_SIGHT
+;		call	HLineDraw
+
+;		mov	cx,HUD_X_ORG-6
+;		mov	dx,HUD_X_ORG-4
+;		mov	bl,HUD_Y_ORG-9
+;		mov	al,COL_SIGHT
+;		call	HLineDraw
+
+;		mov	cx,HUD_X_ORG+4
+;		mov	dx,HUD_X_ORG+6
+;		mov	bl,HUD_Y_ORG-9
+;		mov	al,COL_SIGHT
+;		call	HLineDraw
+
+;		mov	cx,HUD_X_ORG-7
+;		mov	bl,HUD_Y_ORG-8
+;		mov	al,COL_SIGHT
+;		call	SetPixel
+
+;		mov	cx,HUD_X_ORG+7
+;		mov	bl,HUD_Y_ORG-8
+;		mov	al,COL_SIGHT
+;		call	SetPixel
+
+;		mov	cx,HUD_X_ORG-2
+;		mov	dx,HUD_X_ORG+2
+;		mov	bl,HUD_Y_ORG-5
+;		mov	al,COL_SIGHT
+;		call	HLineDraw
+
+;		mov	cx,HUD_X_ORG-3
+;		mov	bl,HUD_Y_ORG-4
+;		mov	al,COL_SIGHT
+;		call	SetPixel
+
+;		mov	cx,HUD_X_ORG+3
+;		mov	bl,HUD_Y_ORG-4
+;		mov	al,COL_SIGHT
+;		call	SetPixel
+
+;* down stroke
+
+;		mov	cx,HUD_X_ORG
+;		mov	bl,HUD_Y_ORG+17
+;		mov	bh,HUD_Y_ORG+6
+;		mov	al,COL_SIGHT
+;		call	VLineDraw
+
+;		mov	cx,HUD_X_ORG-2
+;		mov	dx,HUD_X_ORG+2
+;		mov	bl,HUD_Y_ORG+18
+;		mov	al,COL_SIGHT
+;		call	HLineDraw
+
+;		mov	cx,HUD_X_ORG-2
+;		mov	dx,HUD_X_ORG+2
+;		mov	bl,HUD_Y_ORG+14
+;		mov	al,COL_SIGHT
+;		call	HLineDraw
+
+;		mov	cx,HUD_X_ORG-3
+;		mov	dx,HUD_X_ORG+3
+;		mov	bl,HUD_Y_ORG+10
+;		mov	al,COL_SIGHT
+;		call	HLineDraw
+
+;		mov	cx,HUD_X_ORG-6
+;		mov	dx,HUD_X_ORG-4
+;		mov	bl,HUD_Y_ORG+9
+;		mov	al,COL_SIGHT
+;		call	HLineDraw
+
+;		mov	cx,HUD_X_ORG+4
+;		mov	dx,HUD_X_ORG+6
+;		mov	bl,HUD_Y_ORG+9
+;		mov	al,COL_SIGHT
+;		call	HLineDraw
+
+;		mov	cx,HUD_X_ORG-7
+;		mov	bl,HUD_Y_ORG+8
+;		mov	al,COL_SIGHT
+;		call	SetPixel
+
+;		mov	cx,HUD_X_ORG+7
+;		mov	bl,HUD_Y_ORG+8
+;		mov	al,COL_SIGHT
+;		call	SetPixel
+
+;		mov	cx,HUD_X_ORG-2
+;		mov	dx,HUD_X_ORG+2
+;		mov	bl,HUD_Y_ORG+5
+;		mov	al,COL_SIGHT
+;		call	HLineDraw
+
+;		mov	cx,HUD_X_ORG-3
+;		mov	bl,HUD_Y_ORG+4
+;		mov	al,COL_SIGHT
+;		call	SetPixel
+
+;		mov	cx,HUD_X_ORG+3
+;		mov	bl,HUD_Y_ORG+4
+;		mov	al,COL_SIGHT
+;		call	SetPixel
+
+;* left stroke
+
+;		mov	cx,HUD_X_ORG-21
+;		mov	dx,HUD_X_ORG-7
+;		mov	bl,HUD_Y_ORG
+;		mov	al,COL_SIGHT
+;		call	HLineDraw
+
+;		mov	cx,HUD_X_ORG-22
+;		mov	bl,HUD_Y_ORG-2
+;		mov	bh,HUD_Y_ORG+2
+;		mov	al,COL_SIGHT
+;		call	VLineDraw
+
+;		mov	cx,HUD_X_ORG-17
+;		mov	bl,HUD_Y_ORG-2
+;		mov	bh,HUD_Y_ORG+2
+;		mov	al,COL_SIGHT
+;		call	VLineDraw
+
+;		mov	cx,HUD_X_ORG-12
+;		mov	bl,HUD_Y_ORG-2
+;		mov	bh,HUD_Y_ORG+2
+;		mov	al,COL_SIGHT
+;		call	VLineDraw
+
+;		mov	cx,HUD_X_ORG-11
+;		mov	bl,HUD_Y_ORG-4
+;		mov	bh,HUD_Y_ORG-3
+;		mov	al,COL_SIGHT
+;		call	VLineDraw
+
+;		mov	cx,HUD_X_ORG-11
+;		mov	bl,HUD_Y_ORG+3
+;		mov	bh,HUD_Y_ORG+4
+;		mov	al,COL_SIGHT
+;		call	VLineDraw
+
+;		mov	cx,HUD_X_ORG-10
+;		mov	bl,HUD_Y_ORG-5
+;		mov	al,COL_SIGHT
+;		call	SetPixel
+
+;		mov	cx,HUD_X_ORG-10
+;		mov	bl,HUD_Y_ORG+5
+;		mov	al,COL_SIGHT
+;		call	SetPixel
+
+;		mov	cx,HUD_X_ORG-6
+;		mov	bl,HUD_Y_ORG-1
+;		mov	bh,HUD_Y_ORG+1
+;		mov	al,COL_SIGHT
+;		call	VLineDraw
+
+;		mov	cx,HUD_X_ORG-5
+;		mov	bl,HUD_Y_ORG-2
+;		mov	al,COL_SIGHT
+;		call	SetPixel
+
+;		mov	cx,HUD_X_ORG-5
+;		mov	bl,HUD_Y_ORG+2
+;		mov	al,COL_SIGHT
+;		call	SetPixel
+
+;* right stroke
+
+;		mov	cx,HUD_X_ORG+21
+;		mov	dx,HUD_X_ORG+7
+;		mov	bl,HUD_Y_ORG
+;		mov	al,COL_SIGHT
+;		call	HLineDraw
+
+;		mov	cx,HUD_X_ORG+22
+;		mov	bl,HUD_Y_ORG-2
+;		mov	bh,HUD_Y_ORG+2
+;		mov	al,COL_SIGHT
+;		call	VLineDraw
+
+;		mov	cx,HUD_X_ORG+17
+;		mov	bl,HUD_Y_ORG-2
+;		mov	bh,HUD_Y_ORG+2
+;		mov	al,COL_SIGHT
+;		call	VLineDraw
+
+;		mov	cx,HUD_X_ORG+12
+;		mov	bl,HUD_Y_ORG-2
+;		mov	bh,HUD_Y_ORG+2
+;		mov	al,COL_SIGHT
+;		call	VLineDraw
+
+;		mov	cx,HUD_X_ORG+11
+;		mov	bl,HUD_Y_ORG-4
+;		mov	bh,HUD_Y_ORG-3
+;		mov	al,COL_SIGHT
+;		call	VLineDraw
+
+;		mov	cx,HUD_X_ORG+11
+;		mov	bl,HUD_Y_ORG+3
+;		mov	bh,HUD_Y_ORG+4
+;		mov	al,COL_SIGHT
+;		call	VLineDraw
+
+;		mov	cx,HUD_X_ORG+10
+;		mov	bl,HUD_Y_ORG-5
+;		mov	al,COL_SIGHT
+;		call	SetPixel
+
+;		mov	cx,HUD_X_ORG+10
+;		mov	bl,HUD_Y_ORG+5
+;		mov	al,COL_SIGHT
+;		call	SetPixel
+
+;		mov	cx,HUD_X_ORG+6
+;		mov	bl,HUD_Y_ORG-1
+;		mov	bh,HUD_Y_ORG+1
+;		mov	al,COL_SIGHT
+;		call	VLineDraw
+
+;		mov	cx,HUD_X_ORG+5
+;		mov	bl,HUD_Y_ORG-2
+;		mov	al,COL_SIGHT
+;		call	SetPixel
+
+;		mov	cx,HUD_X_ORG+5
+;		mov	bl,HUD_Y_ORG+2
+;		mov	al,COL_SIGHT
+;		call	SetPixel
+
+;		ret
+
+;DrawStandby	ENDP
+
+
+
+
+;----------------------------------------------------------------------------
+
+;* FLIRDisp_Ori - forward looking infra-red display
+;*
+;* pass: si -> TAB data block
+;* ret : nothing
+;* kill: assume all
+
+FLIRDisp_Ori 	PROC	NEAR
+        mov InCockpit,1
+		KTEST	KF_NavigViewWithCtrl
+		jz	@F	
+		KCLEAR	KF_NavigViewWithCtrl
+		cmp TAB2.TAB_MODE,TAB_TIALD
+		je @F
+        add bx, 2 ;Pointer skips to previous TAB display, i.e., TIALD normal-sized view
+		jmp	SelectSwitch[bx]
+		ret
+@@:
+		mov	ax,TV3_VIEWMODE	;set viewmode for TAB
+		mov	cx,XOrg
+		mov	bl,YOrg
+		call	SetViewMode
+
+		COPY_VP	TMP_VIEW,M_VIEW
+
+		add	WORD PTR TMP_VIEW.VP_ZFT_LO,8	;add zft displacement
+		adc	WORD PTR TMP_VIEW.VP_ZFT_HI,0
+
+		call	DrawIRImage
+
+		mov	ax,NUL_VIEWMODE	;set viewmode for navig view
+		call	SetViewMode	
+		
+		ret
+
+FLIRDisp_Ori	ENDP
+
+
+;----------------------------------------------------------------------------
+;* FLIRDisp_Ori2 - forward looking infra-red display
+;*
+;* pass: si -> TAB data block
+;* ret : nothing
+;* kill: assume all
+
+FLIRDisp_Ori2 	PROC	NEAR
+        mov InCockpit,1
+		KTEST	KF_NavigViewWithCtrl
+		jz	@F	
+		KCLEAR	KF_NavigViewWithCtrl
+		cmp TAB2.TAB_MODE,TAB_TIALD
+		je @F
+        add bx, 2 ;Pointer skips to previous TAB display, i.e., TIALD normal-sized view
+		jmp	SelectSwitch[bx]
+		ret
+@@:
+		mov	ax,TV3_VIEWMODE	;set viewmode for TAB
+		mov	cx,XOrg
+		mov	bl,YOrg
+		call	SetViewMode
+
+		COPY_VP	TMP_VIEW,M_VIEW
+        mov	TMP_VIEW.VP_ROLL,0 ;Added by Frankie Kam on 30/7/2018 to inhibit roll
+		add	WORD PTR TMP_VIEW.VP_ZFT_LO,32	;add zft displacement ; 8
+		adc	WORD PTR TMP_VIEW.VP_ZFT_HI,0
+		
+		call	DrawIRImage
+
+		mov	ax,EXT_VIEWMODE	;set viewmode for navig view
+		call	SetViewMode	
+		
+		ret
+
+FLIRDisp_Ori2	ENDP
+
+
+;----------------------------------------------------------------------------
+;* FLIRDisp_Ori3 - forward looking infra-red display
+;*
+;* pass: si -> TAB data block
+;* ret : nothing
+;* kill: assume all
+
+FLIRDisp_Ori3 	PROC	NEAR
+        mov InCockpit,1
+		KTEST	KF_NavigViewWithCtrl
+		jz	@F	
+		KCLEAR	KF_NavigViewWithCtrl
+		cmp TAB2.TAB_MODE,TAB_TIALD
+		je @F
+        add bx, 2 ;Pointer skips to previous TAB display, i.e., TIALD normal-sized view
+		jmp	SelectSwitch[bx]
+		ret
+@@:
+		mov	ax,INT_VIEWMODE	;set viewmode for TAB
+		mov	cx,XOrg
+		mov	bl,YOrg
+		call	SetViewMode
+
+		COPY_VP	TMP_VIEW,M_VIEW
+        ;mov	TMP_VIEW.VP_ROLL,0 ;Added by Frankie Kam on 30/7/2018 to inhibit roll
+		add	WORD PTR TMP_VIEW.VP_ZFT_LO,40	;add zft displacement ; 8 ;190
+		adc	WORD PTR TMP_VIEW.VP_ZFT_HI,0
+		
+	    call	DrawIRImage
+
+		mov	ax,NUL_VIEWMODE	;set viewmode for navig view EXT_VIEWMODE
+		call	SetViewMode	
+		
+		;HUD Damaged?
+        cmp SSF_HUD,1	
+		je	@F
+		call UpdateHUD
+@@:	
+		
+		ret
+        
+FLIRDisp_Ori3	ENDP
+
+
+;----------------------------------------------------------------------------
+;* FLIRDisp_Ori4 - forward looking infra-red display
+;*
+;* pass: si -> TAB data block
+;* ret : nothing
+;* kill: assume all
+
+FLIRDisp_Ori4 	PROC	NEAR
+        mov InCockpit,1
+		KTEST	KF_NavigViewWithCtrl
+		jz	@F	
+		KCLEAR	KF_NavigViewWithCtrl
+		cmp TAB2.TAB_MODE,TAB_TIALD
+		je @F
+        add bx, 2 ;Pointer skips to previous TAB display, i.e., TIALD normal-sized view
+		jmp	SelectSwitch[bx]
+		ret
+@@:
+		mov	ax,EXT_VIEWMODE	;set viewmode for TAB
+		mov	cx,XOrg
+		mov	bl,YOrg
+		call	SetViewMode
+		
+		COPY_VP	TMP_VIEW,M_VIEW
+        ;mov	TMP_VIEW.VP_ROLL,0 ;Added by Frankie Kam on 30/7/2018 to inhibit roll
+		add	WORD PTR TMP_VIEW.VP_ZFT_LO,8	;add zft displacement ; 8
+		adc	WORD PTR TMP_VIEW.VP_ZFT_HI,0
+		
+		call	DrawIRImage
+
+		mov	ax,EXT_VIEWMODE	;set viewmode for navig view
+		call	SetViewMode	
+
+		;HUD Damaged?
+        cmp SSF_HUD,1	
+		je	@F
+		call UpdateHUD2
+@@:	
+		;call DrawStandby2
+		;mov	si,OFFSET Cannon2$
+		;call	Print$		
+		
+		ret
+
+FLIRDisp_Ori4	ENDP
+
+
+;----------------------------------------------------------------------------
+
+;* TIALDDisp_Ori - thermal image and laser designation display
+;*
+;* pass: si -> TAB data block
+;* ret : nothing
+;* kill: assume all
+;*
+;* note: How to use TIALD (mouse control only):-
+;*
+;*       Use mouse x, y motion to steer TIALD.
+;*
+;*	 Click lh mouse button to designate a target (hold and drag to adjust).
+;*	 Click rh mouse button to cancel designation.
+;*
+;*	 Use CTRL key to zoom (continuous zoom):-
+;*
+;*	    CTRL key and move mouse forward to zoom in.
+;*	    CTRL key and move mouse backward to zoom out.
+;*
+;* 	 Zoom still functions after designation.
+;*
+;* 	 Scan area is related to altitude. The cursor blinks when it is being
+;*	 dragged along the scan edge.
+;*
+;*	 It is not possible to designate outside of the active map area.
+
+TIALDDisp_Ori	PROC	NEAR
+        mov InCockpit,1
+		KTEST	KF_NavigViewWithCtrl
+		jz	@F
+		KCLEAR	KF_NavigViewWithCtrl
+		cmp TAB2.TAB_MODE,TAB_FLIR
+		je @F
+        add bx, 2 ;Pointer skips to next TAB display, i.e., TIALD full-sized view
+		jmp	SelectSwitch[bx]
+		ret
+@@:				
+;----------------------------
+;* check operating conditions
+;----------------------------
+		;cmp	TAB2.TAB_MODE,TAB_FLIR_ORI
+	    ;je @F
+		cmp	M_CosP,16384	;pitch in limits (+/-60degs)?
+		jl	@F		;no ->
+
+		cmp	M_CosR,16384	;roll in limits (+/-60degs)?
+		jl	@F		;no ->
+		cmp	TrueRadAlt,MIN_OP_RAD_ALT	;rad alt ok?
+		jae	TIALDOk_Ori				;no ->
+
+@@:		mov	TDMode,TIALD_INIT
+
+		call	InvalidDisp_Ori
+		jmp	TIALDExit_Ori
+
+;---------------
+;* init viewmode
+;---------------
+
+TIALDOk_Ori:	mov	ax,TV3_VIEWMODE
+		mov	cx,XOrg
+		mov	bl,YOrg
+		call	SetViewMode
+
+;----------------------------
+;* store visual configuration
+;----------------------------
+
+		push	WORD PTR GradEnabled
+		push	WORD PTR StarsEnabled
+		push	WORD PTR CloudsEnabled
+		push	WORD PTR HillTextEnabled
+
+		push	SecScanCnt1
+		push	SecScanOff1
+		push	SecScanCnt2
+		push	SecScanOff2
+
+;-----------------------------
+;* modify visual configuration
+;-----------------------------
+
+;* if night or foggy use IR visual colours
+
+		cmp	Night,1		;Dusk (still light enough to see)?
+		je	SkipIRCols_Ori	;no ->
+
+		cmp	Night,0		;night?
+		jne	@F		;yes ->
+
+		cmp	Fog,0		;foggy?
+		je	SkipIRCols_Ori	;no ->
+
+@@:		;call CheckForNVG
+        ;call	SetIRPalette
+		;mov	StarsEnabled,0
+
+SkipIRCols_Ori:	mov	GradEnabled,0
+		mov	CloudsEnabled,0
+		mov	HillTextEnabled,0
+
+		mov	SecScanCnt1,5		;minimize range
+		mov	SecScanOff1,-2
+		mov	SecScanCnt2,5
+		mov	SecScanOff2,-2
+
+;----------------------
+;* calc TIALD scan size
+;----------------------
+
+		call	CalcScanSize
+
+;-----------------
+;* clear drag flag
+;-----------------
+
+		mov	TDDrag,0
+
+;------------------
+;* read mouse input
+;------------------
+
+		cmp	DisableInput,0	;input disabled?
+		jne	@F		;yes ->
+
+		mov	si,TABPtr
+		test	[si].TAB_HAS_MOUSE,1	;mouse available?
+		jnz	ReadTIALDMouse_Ori		;yes ->
+
+;* null input from mouse
+
+@@:		xor	ax,ax
+		xor	bx,bx
+		xor	cx,cx
+		xor	dx,dx
+
+		mov	XMickeys,cx
+		mov	YMickeys,bx
+
+		mov	TDZoomKey,0
+
+		jmp	SortTDMode_Ori
+
+ReadTIALDMouse_Ori:	mov	al,Key[K_CTRL]	;update zoom override flag
+		mov	TDZoomKey,al
+
+		call	ReadMouseMotion
+
+;* note: al = 1 = lhs button pressed
+;*       ah = 1 = rhs button pressed
+;*       cx = XMickeys (-32768 .. 32767)
+;*       bx = YMickeys (-32768 .. 32767)
+;*       dl = 1 = lhs button just pressed
+;*       dh = 1 = rhs button just pressed
+
+;-------------
+;* select mode
+;-------------
+
+SortTDMode_Ori:	mov	bx,TDMode
+		jmp	TDSwitch_Ori[bx]
+
+;---------------------------
+TIALDInit_Ori	LABEL	NEAR
+;---------------------------
+
+;* init mode ensures start up into search mode regardless of mouse input
+
+		call	SetDatum
+
+		mov	TDMode,TIALD_SEARCH
+
+		jmp	IntoSearch_Ori
+
+;---------------------------
+TIALDSearch_Ori	LABEL	NEAR
+;---------------------------
+
+;* cancel lock?
+
+		test	dh,dh		;rh button just pressed?
+		jz	@F		;no ->
+
+		push	dx
+		call	CancelTgtWP
+		pop	dx
+
+;* switch to adjust lock mode?
+
+@@:		test	dl,dl		;lh button just pressed?
+		jz	@F		;no ->
+
+		call	SetTarget
+		jc	@F		;target invalid ->
+
+		mov	TDMode,TIALD_ADJ_LOCK
+
+		jmp	IntoAdjustLock_Ori
+
+;* switch to zoom mode?
+
+@@:		test	TDZoomKey,1	;CTRL key pressed?
+		jz	IntoSearch_Ori	;no ->
+
+		mov	TDMode,TIALD_ZOOM
+
+		jmp	IntoZoom_Ori
+
+;* search within viewing window
+
+IntoSearch_Ori:	call	SetDatum
+
+		call	AdjustXYOffsets
+
+		call	RotateXYOffsets
+
+		jmp	ContVisual_Ori
+
+;---------------------------
+TIALDZoom_Ori	LABEL	NEAR
+;---------------------------
+
+;* cancel lock?
+
+		test	dh,dh		;rh button just pressed?
+		jz	@F		;no ->
+
+		push	dx
+		call	CancelTgtWP
+		pop	dx
+
+;* switch to adjust lock mode?
+
+@@:		test	dl,dl		;lh button just pressed?
+		jz	@F		;no ->
+
+		call	SetTarget
+		jc	@F		;target invalid ->
+
+		mov	TDMode,TIALD_ADJ_LOCK
+
+		jmp	IntoAdjustLock_Ori
+
+;* switch to search mode?
+
+@@:		test	TDZoomKey,1	;CTRL key released?
+		jnz	IntoZoom_Ori	;no ->
+
+		call	RecalcXYOffsets
+
+		call	SetDatum
+
+		mov	TDMode,TIALD_SEARCH
+
+		jmp	IntoSearch_Ori
+
+;* adjust zoom
+
+IntoZoom_Ori:	call	AdjustZoom
+
+		call	RecalcXYOffsets
+
+		test	TDDrag,1	;drag point?
+		jz	@F		;no ->
+
+		call	SetDatum
+
+		call	RotateXYOffsets
+
+@@:		jmp	ContVisual_Ori
+
+;---------------------------
+TIALDAdjustLock_Ori	LABEL	NEAR
+;---------------------------
+
+;* cancel lock?
+
+		test	dh,dh		;rh button just pressed?
+		jz	@F		;no ->
+
+		call	CancelTgtWP
+
+		call	RecalcXYOffsets
+
+		call	SetDatum
+
+		mov	TDMode,TIALD_SEARCH
+
+		jmp	IntoSearch_Ori
+
+;* switch to target lock mode?
+
+@@:		test	al,al		;lh button released?
+		jnz	IntoAdjustLock_Ori	;no ->
+
+		mov	TDMode,TIALD_TGT_LOCK
+
+		jmp	IntoTargetLock_Ori
+
+IntoAdjustLock_Ori:	call	AdjustLock
+
+		call	RecalcXYOffsets
+
+		test	TDDrag,1	;drag point?
+		jz	@F		;no ->
+
+		call	SetDatum
+
+		call	RotateXYOffsets
+
+@@:		call	SetTarget
+		jnc	ContVisual_Ori	;target valid ->
+
+		call	RecalcXYOffsets
+
+		call	SetDatum
+
+		mov	TDMode,TIALD_SEARCH
+
+		jmp	IntoSearch_Ori
+
+;---------------------------
+TIALDTargetLock_Ori	LABEL	NEAR
+;---------------------------
+
+;* has target moved (or cancelled) externally?
+
+		call	TargetMoved	;moved (or cancelled)?
+		jc	CancelLock_Ori	;yes ->
+
+;* cancel target designation (switch to search mode)?
+
+		test	dh,dh		;rh button just pressed?
+		jz	@F		;no ->
+
+		call	CancelTgtWP
+
+CancelLock_Ori:	call	RecalcXYOffsets
+
+		call	SetDatum
+
+		mov	TDMode,TIALD_SEARCH
+
+		jmp	IntoSearch_Ori
+
+;* return to adjust lock mode?
+
+@@:		test	dl,dl		;lh button just pressed?
+		jz	@F		;no ->
+
+		mov	TDMode,TIALD_ADJ_LOCK
+
+		jmp	IntoAdjustLock_Ori
+
+;* adjust zoom?
+
+@@:	 	test	TDZoomKey,1	;CTRL key pressed?
+		jz	IntoTargetLock_Ori	;no ->
+
+		call	AdjustZoom
+
+IntoTargetLock_Ori:	call	RecalcXYOffsets
+
+		test	TDDrag,1	;within scan limits?
+		jz	ContVisual_Ori	;yes ->
+
+		call	SetDatum
+
+		mov	TDMode,TIALD_SEARCH
+
+		jmp	IntoSearch_Ori
+
+;---------------------------
+ContVisual_Ori	LABEL	NEAR
+;---------------------------
+
+;* vp alt = max(TDScanSize * TDZoom / 256, gnd ht + MIN_OP_RAD_ALT)
+
+		mov	ax,TDScanSize
+		mov	dx,TDZoom
+		mul	dx
+
+		mov	dh,al		;store 1/2 bit
+		mov	al,ah		;/256
+		mov	ah,dl
+		shl	dh,1		;expose 1/2 bit
+		ROUNDUP	ax
+
+		push	ax
+
+		mov	si,OFFSET TIALD_VIEW
+		call	CalcGndHeight
+
+		add	ax,MIN_OP_RAD_ALT
+
+		pop	bx
+
+		cmp	bx,ax		;vp alt >= gnd ht + MIN_OP_RAD_ALT?
+		jae	@F		;yes ->
+
+		mov	bx,ax
+
+@@:		xor	cx,cx
+
+;* if overcast then
+;*    if ac alt >= cloudbase then
+;*       if vp alt < cloudbase then
+;*          vp alt = cloudbase
+;*       endif
+;*    endif
+;* endif
+
+		test	Overcast,1	;overcast?
+		jz	SetVPAlt_Ori	;no ->
+
+		mov	ax,WORD PTR M_VIEW.VP_ZFT_LO
+		mov	dx,WORD PTR M_VIEW.VP_ZFT_HI
+		sub	ax,WORD PTR CloudBase
+		sbb	dx,WORD PTR CloudBase+2
+		jb	SetVPAlt_Ori	;ac alt < cloudbase ->
+
+		mov	ax,bx
+		mov	dx,cx
+		sub	ax,WORD PTR CloudBase
+		sbb	dx,WORD PTR CloudBase+2
+		jae	SetVPAlt_Ori	;vp alt > cloudbase ->
+
+		mov	bx,WORD PTR CloudBase
+		mov	cx,WORD PTR CloudBase+2
+
+SetVPAlt_Ori:	mov	WORD PTR TIALD_VIEW.VP_ZFT_HI,cx
+		mov	WORD PTR TIALD_VIEW.VP_ZFT_LO,bx
+
+;-------------------
+;* draw TIALD visual
+;-------------------
+
+;* keep TIALD hdg in line with aircraft hdg (even if zoom or lock)
+
+		mov	ax,M_VIEW.VP_HDG
+		mov	TIALD_VIEW.VP_HDG,ax
+
+;* pitched down, no roll
+
+		mov	TIALD_VIEW.VP_PITCH,400 ;384           ;hacked by Frankie on 8th July 2018
+		;mov	TIALD_VIEW.VP_ROLL,0               ;hacked by Frankie on 8th July 2018
+		
+		mov	si,OFFSET TIALD_VIEW
+		call	Visual
+
+;----------------
+;* draw symbology
+;----------------
+
+;* update blink timer
+
+		mov	ax,TDBlinkTimer
+		sub	ax,LastFrame
+		mov	TDBlinkTimer,ax
+		jnc	@F
+
+		mov	TDBlinkTimer,TD_BLINK_RATE
+
+		xor	TDBlink,1	;toggle blink flag
+
+;* if "dragging" then switch cross off for blink period
+
+		mov	TDCross,1	;assume cross on
+
+		jnz	@F		;0 .. 1 (leading edge) ->
+
+		test	TDDrag,1	;dragging?
+		jz	@F		;no ->
+
+		mov	TDCross,0	;cross off
+
+;* draw symbology wrt mode
+
+@@:		mov	bx,TDMode
+		jmp	TDSymbolSwitch_Ori[bx]
+
+;---------------------------
+TDSymZoom_Ori	LABEL	NEAR
+;---------------------------
+
+		call	DrawLaserSymbol_Ori
+
+		jmp	TDSymOk_Ori
+
+;---------------------------
+TDSymAdjustLock_Ori	LABEL	NEAR
+;---------------------------
+
+		call	DrawLaserSymbol_Ori
+
+;* blink track symbol
+
+		test	TDBLink,1
+		jz	@F
+
+		call	DrawTrackSymbol_Ori
+
+@@:		jmp	TDSymOk_Ori
+
+;---------------------------
+TDSymTargetLock_Ori	LABEL	NEAR
+;---------------------------
+
+;* blink laser symbol
+
+		test	TDBLink,1
+		jz	@F
+
+		call	DrawLaserSymbol_Ori
+
+@@:		call	DrawTrackSymbol_Ori
+
+;---------------------------
+TDSymOk_Ori		LABEL	NEAR
+;---------------------------
+
+		call	DrawCrossSymbol_Ori
+
+;------------------------------
+;* restore visual configuration
+;------------------------------
+
+		pop	SecScanOff2
+		pop	SecScanCnt2
+		pop	SecScanOff1
+		pop	SecScanCnt1
+
+		pop	WORD PTR HillTextEnabled
+		pop	WORD PTR CloudsEnabled
+		pop	WORD PTR StarsEnabled
+		pop	WORD PTR GradEnabled
+
+;* if night or foggy restore visual colours
+
+		cmp	Night,0		;night?
+		jne	@F		;yes ->
+
+		cmp	Fog,0		;foggy?
+		je	SkipFixCols_Ori	;no ->
+
+@@:		;call CheckForNVG
+        ;call	FixIRPalette
+
+;------------------
+;* restore viewmode
+;------------------
+
+SkipFixCols_Ori:	mov	ax,NUL_VIEWMODE
+		call	SetViewMode	
+
+;--------------------
+;* update TIALD flags
+;--------------------
+
+TIALDExit_Ori:	mov	al,1		;assume active
+
+		cmp	TDMode,TIALD_ADJ_LOCK
+		je	@F		
+		cmp	TDMode,TIALD_TGT_LOCK
+		je	@F		
+
+		xor	al,al		;inactive
+
+@@:		mov	LaserActive,al
+
+		mov	TIALDActive,1
+		
+		ret
+
+TIALDDisp_Ori	ENDP
+
+
+
+TIALDDisp_Ori2	PROC	NEAR
+        mov InCockpit,1
+		KTEST	KF_NavigViewWithCtrl
+		jz	@F
+		KCLEAR	KF_NavigViewWithCtrl
+		cmp TAB2.TAB_MODE,TAB_FLIR
+		je @F
+        add bx, 2 ;Pointer skips to next TAB display, i.e., TIALD full-sized view
+		jmp	SelectSwitch[bx]
+		ret
+@@:				
+;----------------------------
+;* check operating conditions
+;----------------------------
+		;cmp	TAB2.TAB_MODE,TAB_FLIR_ORI
+	    ;je @F
+		cmp	M_CosP,16384	;pitch in limits (+/-60degs)?
+		jl	@F		;no ->
+
+		cmp	M_CosR,16384	;roll in limits (+/-60degs)?
+		jl	@F		;no ->
+		cmp	TrueRadAlt,MIN_OP_RAD_ALT	;rad alt ok?
+		jae	TIALDOk_Ori2				;no ->
+
+@@:		mov	TDMode,TIALD_INIT
+
+		call	InvalidDisp_Ori
+		jmp	TIALDExit_Ori2
+
+;---------------
+;* init viewmode
+;---------------
+
+TIALDOk_Ori2:	mov	ax,TV3_VIEWMODE
+		mov	cx,XOrg
+		mov	bl,YOrg
+		call	SetViewMode
+
+;----------------------------
+;* store visual configuration
+;----------------------------
+
+		push	WORD PTR GradEnabled
+		push	WORD PTR StarsEnabled
+		push	WORD PTR CloudsEnabled
+		push	WORD PTR HillTextEnabled
+
+		push	SecScanCnt1
+		push	SecScanOff1
+		push	SecScanCnt2
+		push	SecScanOff2
+
+;-----------------------------
+;* modify visual configuration
+;-----------------------------
+
+;* if night or foggy use IR visual colours
+
+		cmp	Night,1		;Dusk (still light enough to see)?
+		je	SkipIRCols_Ori2	;no ->
+
+		cmp	Night,0		;night?
+		jne	@F		;yes ->
+
+		cmp	Fog,0		;foggy?
+		je	SkipIRCols_Ori2	;no ->
+
+@@:		;call CheckForNVG
+        ;call	SetIRPalette
+		;mov	StarsEnabled,0
+
+SkipIRCols_Ori2:	mov	GradEnabled,0
+		mov	CloudsEnabled,0
+		mov	HillTextEnabled,0
+
+		mov	SecScanCnt1,5		;minimize range
+		mov	SecScanOff1,-2
+		mov	SecScanCnt2,5
+		mov	SecScanOff2,-2
+
+;----------------------
+;* calc TIALD scan size
+;----------------------
+
+		call	CalcScanSize
+
+;-----------------
+;* clear drag flag
+;-----------------
+
+		mov	TDDrag,0
+
+;------------------
+;* read mouse input
+;------------------
+	
+		cmp	DisableInput,0	;input disabled?
+		jne	@F		;yes ->
+
+		mov	si,TABPtr
+		;test	[si].TAB_HAS_MOUSE,1	;mouse available?
+		;jnz	ReadTIALDMouse_Ori2		;yes ->
+        jmp ReadTIALDMouse_Ori2		;yes ->
+;* null input from mouse
+
+@@:		xor	ax,ax
+		xor	bx,bx
+		xor	cx,cx
+		xor	dx,dx
+
+		mov	XMickeys,cx
+		mov	YMickeys,bx
+
+		mov	TDZoomKey,0
+
+		jmp	SortTDMode_Ori2
+
+ReadTIALDMouse_Ori2:	mov	al,Key[K_CTRL]	;update zoom override flag
+		mov	TDZoomKey,al
+
+		call	ReadMouseMotion
+
+;* note: al = 1 = lhs button pressed
+;*       ah = 1 = rhs button pressed
+;*       cx = XMickeys (-32768 .. 32767)
+;*       bx = YMickeys (-32768 .. 32767)
+;*       dl = 1 = lhs button just pressed
+;*       dh = 1 = rhs button just pressed
+
+;-------------
+;* select mode
+;-------------
+
+SortTDMode_Ori2:	mov	bx,TDMode
+		jmp	TDSwitch_Ori2[bx]
+
+;---------------------------
+TIALDInit_Ori2	LABEL	NEAR
+;---------------------------
+
+;* init mode ensures start up into search mode regardless of mouse input
+
+		call	SetDatum
+
+		mov	TDMode,TIALD_SEARCH
+
+		jmp	IntoSearch_Ori2
+
+;---------------------------
+TIALDSearch_Ori2	LABEL	NEAR
+;---------------------------
+
+;* cancel lock?
+
+		test	dh,dh		;rh button just pressed?
+		jz	@F		;no ->
+
+		push	dx
+		call	CancelTgtWP
+		pop	dx
+
+;* switch to adjust lock mode?
+
+@@:		test	dl,dl		;lh button just pressed?
+		jz	@F		;no ->
+
+		call	SetTarget
+		jc	@F		;target invalid ->
+
+		mov	TDMode,TIALD_ADJ_LOCK
+
+		jmp	IntoAdjustLock_Ori2
+
+;* switch to zoom mode?
+
+@@:		test	TDZoomKey,1	;CTRL key pressed?
+		jz	IntoSearch_Ori2	;no ->
+
+		mov	TDMode,TIALD_ZOOM
+
+		jmp	IntoZoom_Ori2
+
+;* search within viewing window
+
+IntoSearch_Ori2:	call	SetDatum
+
+		call	AdjustXYOffsets
+
+		call	RotateXYOffsets
+
+		jmp	ContVisual_Ori2
+
+;---------------------------
+TIALDZoom_Ori2	LABEL	NEAR
+;---------------------------
+
+;* cancel lock?
+
+		test	dh,dh		;rh button just pressed?
+		jz	@F		;no ->
+
+		push	dx
+		call	CancelTgtWP
+		pop	dx
+
+;* switch to adjust lock mode?
+
+@@:		test	dl,dl		;lh button just pressed?
+		jz	@F		;no ->
+
+		call	SetTarget
+		jc	@F		;target invalid ->
+
+		mov	TDMode,TIALD_ADJ_LOCK
+
+		jmp	IntoAdjustLock_Ori2
+
+;* switch to search mode?
+
+@@:		test	TDZoomKey,1	;CTRL key released?
+		jnz	IntoZoom_Ori2	;no ->
+
+		call	RecalcXYOffsets
+
+		call	SetDatum
+
+		mov	TDMode,TIALD_SEARCH
+
+		jmp	IntoSearch_Ori2
+
+;* adjust zoom
+
+IntoZoom_Ori2:	call	AdjustZoom
+
+		call	RecalcXYOffsets
+
+		test	TDDrag,1	;drag point?
+		jz	@F		;no ->
+
+		call	SetDatum
+
+		call	RotateXYOffsets
+
+@@:		jmp	ContVisual_Ori2
+
+;---------------------------
+TIALDAdjustLock_Ori2	LABEL	NEAR
+;---------------------------
+
+;* cancel lock?
+
+		test	dh,dh		;rh button just pressed?
+		jz	@F		;no ->
+
+		call	CancelTgtWP
+
+		call	RecalcXYOffsets
+
+		call	SetDatum
+
+		mov	TDMode,TIALD_SEARCH
+
+		jmp	IntoSearch_Ori2
+
+;* switch to target lock mode?
+
+@@:		test	al,al		;lh button released?
+		jnz	IntoAdjustLock_Ori2	;no ->
+
+		mov	TDMode,TIALD_TGT_LOCK
+
+		jmp	IntoTargetLock_Ori2
+
+IntoAdjustLock_Ori2:	call	AdjustLock
+
+		call	RecalcXYOffsets
+
+		test	TDDrag,1	;drag point?
+		jz	@F		;no ->
+
+		call	SetDatum
+
+		call	RotateXYOffsets
+
+@@:		call	SetTarget
+		jnc	ContVisual_Ori2	;target valid ->
+
+		call	RecalcXYOffsets
+
+		call	SetDatum
+
+		mov	TDMode,TIALD_SEARCH
+
+		jmp	IntoSearch_Ori2
+
+;---------------------------
+TIALDTargetLock_Ori2	LABEL	NEAR
+;---------------------------
+
+;* has target moved (or cancelled) externally?
+
+		call	TargetMoved	;moved (or cancelled)?
+		jc	CancelLock_Ori2	;yes ->
+
+;* cancel target designation (switch to search mode)?
+
+		test	dh,dh		;rh button just pressed?
+		jz	@F		;no ->
+
+		call	CancelTgtWP
+
+CancelLock_Ori2:	call	RecalcXYOffsets
+
+		call	SetDatum
+
+		mov	TDMode,TIALD_SEARCH
+
+		jmp	IntoSearch_Ori2
+
+;* return to adjust lock mode?
+
+@@:		test	dl,dl		;lh button just pressed?
+		jz	@F		;no ->
+
+		mov	TDMode,TIALD_ADJ_LOCK
+
+		jmp	IntoAdjustLock_Ori2
+
+;* adjust zoom?
+
+@@:	 	test	TDZoomKey,1	;CTRL key pressed?
+		jz	IntoTargetLock_Ori2	;no ->
+
+		call	AdjustZoom
+
+IntoTargetLock_Ori2:	call	RecalcXYOffsets
+
+		test	TDDrag,1	;within scan limits?
+		jz	ContVisual_Ori2	;yes ->
+
+		call	SetDatum
+
+		mov	TDMode,TIALD_SEARCH
+
+		jmp	IntoSearch_Ori2
+
+;---------------------------
+ContVisual_Ori2	LABEL	NEAR
+;---------------------------
+
+;* vp alt = max(TDScanSize * TDZoom / 256, gnd ht + MIN_OP_RAD_ALT)
+
+		mov	ax,TDScanSize
+		mov	dx,TDZoom
+		mul	dx
+
+		mov	dh,al		;store 1/2 bit
+		mov	al,ah		;/256
+		mov	ah,dl
+		shl	dh,1		;expose 1/2 bit
+		ROUNDUP	ax
+
+		push	ax
+
+		mov	si,OFFSET TIALD_VIEW
+		call	CalcGndHeight
+
+		add	ax,MIN_OP_RAD_ALT
+
+		pop	bx
+
+		cmp	bx,ax		;vp alt >= gnd ht + MIN_OP_RAD_ALT?
+		jae	@F		;yes ->
+
+		mov	bx,ax
+
+@@:		xor	cx,cx
+
+;* if overcast then
+;*    if ac alt >= cloudbase then
+;*       if vp alt < cloudbase then
+;*          vp alt = cloudbase
+;*       endif
+;*    endif
+;* endif
+
+		test	Overcast,1	;overcast?
+		jz	SetVPAlt_Ori2	;no ->
+
+		mov	ax,WORD PTR M_VIEW.VP_ZFT_LO
+		mov	dx,WORD PTR M_VIEW.VP_ZFT_HI
+		sub	ax,WORD PTR CloudBase
+		sbb	dx,WORD PTR CloudBase+2
+		jb	SetVPAlt_Ori2	;ac alt < cloudbase ->
+
+		mov	ax,bx
+		mov	dx,cx
+		sub	ax,WORD PTR CloudBase
+		sbb	dx,WORD PTR CloudBase+2
+		jae	SetVPAlt_Ori2	;vp alt > cloudbase ->
+
+		mov	bx,WORD PTR CloudBase
+		mov	cx,WORD PTR CloudBase+2
+
+SetVPAlt_Ori2:	mov	WORD PTR TIALD_VIEW.VP_ZFT_HI,cx
+		mov	WORD PTR TIALD_VIEW.VP_ZFT_LO,bx
+
+;-------------------
+;* draw TIALD visual
+;-------------------
+
+;* keep TIALD hdg in line with aircraft hdg (even if zoom or lock)
+
+		mov	ax,M_VIEW.VP_HDG
+		mov	TIALD_VIEW.VP_HDG,ax
+
+;* pitched down, no roll
+
+		mov	TIALD_VIEW.VP_PITCH,400 ;384           ;hacked by Frankie on 8th July 2018
+		;mov	TIALD_VIEW.VP_ROLL,0               ;hacked by Frankie on 8th July 2018
+		
+		mov	si,OFFSET TIALD_VIEW
+		call	Visual
+
+;----------------
+;* draw symbology
+;----------------
+
+;* update blink timer
+
+		mov	ax,TDBlinkTimer
+		sub	ax,LastFrame
+		mov	TDBlinkTimer,ax
+		jnc	@F
+
+		mov	TDBlinkTimer,TD_BLINK_RATE
+
+		xor	TDBlink,1	;toggle blink flag
+
+;* if "dragging" then switch cross off for blink period
+
+		mov	TDCross,1	;assume cross on
+
+		jnz	@F		;0 .. 1 (leading edge) ->
+
+		test	TDDrag,1	;dragging?
+		jz	@F		;no ->
+
+		mov	TDCross,0	;cross off
+
+;* draw symbology wrt mode
+
+@@:		mov	bx,TDMode
+		jmp	TDSymbolSwitch_Ori2[bx]
+
+;---------------------------
+TDSymZoom_Ori2	LABEL	NEAR
+;---------------------------
+
+		call	DrawLaserSymbol_Ori
+
+		jmp	TDSymOk_Ori2
+
+;---------------------------
+TDSymAdjustLock_Ori2	LABEL	NEAR
+;---------------------------
+
+		call	DrawLaserSymbol_Ori
+
+;* blink track symbol
+
+		test	TDBLink,1
+		jz	@F
+
+		call	DrawTrackSymbol_Ori
+
+@@:		jmp	TDSymOk_Ori2
+
+;---------------------------
+TDSymTargetLock_Ori2	LABEL	NEAR
+;---------------------------
+
+;* blink laser symbol
+
+		test	TDBLink,1
+		jz	@F
+
+		call	DrawLaserSymbol_Ori
+
+@@:		call	DrawTrackSymbol_Ori
+
+;---------------------------
+TDSymOk_Ori2		LABEL	NEAR
+;---------------------------
+
+		call	DrawCrossSymbol_Ori
+
+;------------------------------
+;* restore visual configuration
+;------------------------------
+
+		pop	SecScanOff2
+		pop	SecScanCnt2
+		pop	SecScanOff1
+		pop	SecScanCnt1
+
+		pop	WORD PTR HillTextEnabled
+		pop	WORD PTR CloudsEnabled
+		pop	WORD PTR StarsEnabled
+		pop	WORD PTR GradEnabled
+
+;* if night or foggy restore visual colours
+
+		cmp	Night,0		;night?
+		jne	@F		;yes ->
+
+		cmp	Fog,0		;foggy?
+		je	SkipFixCols_Ori2	;no ->
+
+@@:		;call CheckForNVG
+        ;call	FixIRPalette
+
+;------------------
+;* restore viewmode
+;------------------
+
+SkipFixCols_Ori2:	;mov	ax,NUL_VIEWMODE
+       mov	ax,EXT_VIEWMODE
+		call	SetViewMode	
+
+;--------------------
+;* update TIALD flags
+;--------------------
+
+TIALDExit_Ori2:	mov	al,1		;assume active
+
+		cmp	TDMode,TIALD_ADJ_LOCK
+		je	@F		
+		cmp	TDMode,TIALD_TGT_LOCK
+		je	@F		
+
+		xor	al,al		;inactive
+
+@@:		mov	LaserActive,al
+
+		mov	TIALDActive,1
+		
+		ret
+
+TIALDDisp_Ori2	ENDP
+
+;----------------------------------------------------------------------------
+
+;* DrawCrossSymbol_Ori
+;*
+;* pass: nothing
+;* ret : nothing
+;* kill: assume all
+
+DrawCrossSymbol_Ori	PROC	NEAR
+
+;* blink cross if "dragging"
+
+		test	TDCross,1
+		_JZ	SkipCross
+
+		mov	bl,YOrg
+		add	bl,YC
+		mov	cx,XOrg
+		mov	dx,cx
+		add	cx,XC-4
+		add	dx,XC-2
+		mov	al,COL_HUD
+		call	HLineDraw
+	
+		mov	bl,YOrg
+		add	bl,YC
+		mov	cx,XOrg
+		mov	dx,cx
+		add	cx,XC+2
+		add	dx,XC+4
+		mov	al,COL_HUD
+		call	HLineDraw
+	
+		mov	bl,YOrg
+		mov	bh,bl
+		add	bl,YC-4
+		add	bh,YC-2
+		mov	cx,XOrg
+		add	cx,XC
+		mov	al,COL_HUD
+		call	VLineDraw
+	
+		mov	bl,YOrg
+		mov	bh,bl
+		add	bl,YC+2
+		add	bh,YC+4
+		mov	cx,XOrg
+		add	cx,XC
+		mov	al,COL_HUD
+		call	VLineDraw
+
+		cmp	TDYOffset,0	;laser ahead of aircraft?
+		_JL	SkipCross	;no ->
+
+		mov	bl,YOrg
+		add	bl,YC-3
+		mov	cx,XOrg
+		add	cx,XC-4
+		mov	al,COL_HUD
+		call	SetPixel
+
+		mov	bl,YOrg
+		add	bl,YC-4
+		mov	cx,XOrg
+		add	cx,XC-4
+		mov	al,COL_HUD
+		call	SetPixel
+
+		mov	bl,YOrg
+		add	bl,YC-4
+		mov	cx,XOrg
+		add	cx,XC-3
+		mov	al,COL_HUD
+		call	SetPixel
+	
+		mov	bl,YOrg
+		add	bl,YC-4
+		mov	cx,XOrg
+		add	cx,XC+3
+		mov	al,COL_HUD
+		call	SetPixel
+
+		mov	bl,YOrg
+		add	bl,YC-4
+		mov	cx,XOrg
+		add	cx,XC+4
+		mov	al,COL_HUD
+		call	SetPixel
+
+		mov	bl,YOrg
+		add	bl,YC-3
+		mov	cx,XOrg
+		add	cx,XC+4
+		mov	al,COL_HUD
+		call	SetPixel
+
+		mov	bl,YOrg
+		add	bl,YC+3
+		mov	cx,XOrg
+		add	cx,XC+4
+		mov	al,COL_HUD
+		call	SetPixel
+
+		mov	bl,YOrg
+		add	bl,YC+4
+		mov	cx,XOrg
+		add	cx,XC+4
+		mov	al,COL_HUD
+		call	SetPixel
+
+		mov	bl,YOrg
+		add	bl,YC+4
+		mov	cx,XOrg
+		add	cx,XC+3
+		mov	al,COL_HUD
+		call	SetPixel
+
+		mov	bl,YOrg
+		add	bl,YC+4
+		mov	cx,XOrg
+		add	cx,XC-3
+		mov	al,COL_HUD
+		call	SetPixel
+
+		mov	bl,YOrg
+		add	bl,YC+4
+		mov	cx,XOrg
+		add	cx,XC-4
+		mov	al,COL_HUD
+		call	SetPixel
+
+		mov	bl,YOrg
+		add	bl,YC+3
+		mov	cx,XOrg
+		add	cx,XC-4
+		mov	al,COL_HUD
+		call	SetPixel
+
+SkipCross_Ori:	ret
+
+DrawCrossSymbol_Ori	ENDP
+
+;----------------------------------------------------------------------------
+
+;* DrawLaserSymbol_Ori
+;*
+;* pass: nothing
+;* ret : nothing
+;* kill: assume all
+
+DrawLaserSymbol_Ori	PROC	NEAR
+
+		mov	bl,YOrg
+		mov	bh,bl
+		add	bl,YC-2  ;Add 4 to YC by Frankie on 8th July 2018
+		add	bh,YC+1  ;Add 4 to YC by Frankie on 8th July 2018
+		mov	cx,XOrg
+		add	cx,XC+6    ;Add 4 to YC by Frankie on 8th July 2018
+		mov	al,COL_HUD
+		call	VLineDraw
+
+		mov	bl,YOrg
+		add	bl,YC+2
+		mov	cx,XOrg
+		mov	dx,cx
+		add	cx,XC+6
+		add	dx,XC+8
+		mov	al,COL_HUD
+		call	HLineDraw
+	
+		ret
+
+DrawLaserSymbol_Ori	ENDP
+
+;----------------------------------------------------------------------------
+
+;* DrawTrackSymbol
+;*
+;* pass: nothing
+;* ret : nothing
+;* kill: assume all
+
+DrawTrackSymbol_Ori	PROC	NEAR
+
+		mov	bl,YOrg
+		mov	bh,bl
+		add	bl,YC-1  ;Add 4 to YC by Frankie on 8th July 2018
+		add	bh,YC+2  ;Add 4 to YC by Frankie on 8th July 2018
+		mov	cx,XOrg
+		add	cx,XC-7
+		mov	al,COL_HUD
+		call	VLineDraw
+
+		mov	bl,YOrg
+		add	bl,YC-2  ;Add 4 to YC by Frankie on 8th July 2018
+		mov	cx,XOrg
+		mov	dx,cx
+		add	cx,XC-8
+		add	dx,XC-6
+		mov	al,COL_HUD
+		call	HLineDraw
+	
+		ret
+
+DrawTrackSymbol_Ori	ENDP
+
+;----------------------------------------------------------------------------
+
+;* InvalidDisp_Ori - draw large 'X' in centre of TAB display
+;*
+;* pass: si -> TAB data block
+;* ret : nothing
+;* kill: assume all (except si)
+
+InvalidDisp_Ori	PROC	NEAR
+
+		call	ClearDisp
+
+		mov	bl,TAB_Y_ORG[si]
+		mov	bh,bl 
+		add	bl,YC-25  ;Add 4 to YC by Frankie on 8th July 2018
+		add	bh,YC+25  ;Add 4 to YC by Frankie on 8th July 2018
+		mov	cx,TAB_X_ORG[si]
+		mov	dx,cx
+		add	cx,XC-25
+		add	dx,XC+25
+		mov	al,COL_CRT8
+
+		push	si
+		call	LineDraw
+		pop	si
+
+		mov	bl,TAB_Y_ORG[si]
+		mov	bh,bl
+		add	bl,YC-25   ;Add 4 to YC by Frankie on 8th July 2018
+		add	bh,YC+25   ;Add 4 to YC by Frankie on 8th July 2018
+		mov	cx,TAB_X_ORG[si]
+		mov	dx,cx
+		add	cx,XC+25
+		add	dx,XC-25
+		mov	al,COL_CRT8
+
+		push	si
+		call	LineDraw
+		pop	si
+
+		ret
+
+InvalidDisp_Ori	ENDP
+
+DrawStandby	PROC	NEAR
+		
+		;mov	si,OFFSET SetUp$
+		;call	Print$
+		
+		mov	si,OFFSET SetUp$
+		call	Print$
+		
+;* centre dot
+
+		mov	cx,HUD_X_ORG
+		mov	bl,HUD_Y_ORG-48
+		mov	al,COL_SIGHT
+		call	SetPixel
+
+;* up stroke
+
+		mov	cx,HUD_X_ORG
+		mov	bl,HUD_Y_ORG-48-17
+		mov	bh,HUD_Y_ORG-48-6
+		mov	al,COL_SIGHT
+		call	VLineDraw
+
+		mov	cx,HUD_X_ORG-2
+		mov	dx,HUD_X_ORG+2
+		mov	bl,HUD_Y_ORG-48-18
+		mov	al,COL_SIGHT
+		call	HLineDraw
+
+		mov	cx,HUD_X_ORG-2
+		mov	dx,HUD_X_ORG+2
+		mov	bl,HUD_Y_ORG-48-14
+		mov	al,COL_SIGHT
+		call	HLineDraw
+
+		mov	cx,HUD_X_ORG-3
+		mov	dx,HUD_X_ORG+3
+		mov	bl,HUD_Y_ORG-48-10
+		mov	al,COL_SIGHT
+		call	HLineDraw
+
+		mov	cx,HUD_X_ORG-6
+		mov	dx,HUD_X_ORG-4
+		mov	bl,HUD_Y_ORG-48-9
+		mov	al,COL_SIGHT
+		call	HLineDraw
+
+		mov	cx,HUD_X_ORG+4
+		mov	dx,HUD_X_ORG+6
+		mov	bl,HUD_Y_ORG-48-9
+		mov	al,COL_SIGHT
+		call	HLineDraw
+
+		mov	cx,HUD_X_ORG-7
+		mov	bl,HUD_Y_ORG-48-8
+		mov	al,COL_SIGHT
+		call	SetPixel
+
+		mov	cx,HUD_X_ORG+7
+		mov	bl,HUD_Y_ORG-48-8
+		mov	al,COL_SIGHT
+		call	SetPixel
+
+		mov	cx,HUD_X_ORG-2
+		mov	dx,HUD_X_ORG+2
+		mov	bl,HUD_Y_ORG-48-5
+		mov	al,COL_SIGHT
+		call	HLineDraw
+
+		mov	cx,HUD_X_ORG-3
+		mov	bl,HUD_Y_ORG-48-4
+		mov	al,COL_SIGHT
+		call	SetPixel
+
+		mov	cx,HUD_X_ORG+3
+		mov	bl,HUD_Y_ORG-48-4
+		mov	al,COL_SIGHT
+		call	SetPixel
+
+;* down stroke
+
+		mov	cx,HUD_X_ORG
+		mov	bl,HUD_Y_ORG-48+17
+		mov	bh,HUD_Y_ORG-48+6
+		mov	al,COL_SIGHT
+		call	VLineDraw
+
+		mov	cx,HUD_X_ORG-2
+		mov	dx,HUD_X_ORG+2
+		mov	bl,HUD_Y_ORG-48+18
+		mov	al,COL_SIGHT
+		call	HLineDraw
+
+		mov	cx,HUD_X_ORG-2
+		mov	dx,HUD_X_ORG+2
+		mov	bl,HUD_Y_ORG-48+14
+		mov	al,COL_SIGHT
+		call	HLineDraw
+
+		mov	cx,HUD_X_ORG-3
+		mov	dx,HUD_X_ORG+3
+		mov	bl,HUD_Y_ORG-48+10
+		mov	al,COL_SIGHT
+		call	HLineDraw
+
+		mov	cx,HUD_X_ORG-6
+		mov	dx,HUD_X_ORG-4
+		mov	bl,HUD_Y_ORG-48+9
+		mov	al,COL_SIGHT
+		call	HLineDraw
+
+		mov	cx,HUD_X_ORG+4
+		mov	dx,HUD_X_ORG+6
+		mov	bl,HUD_Y_ORG-48+9
+		mov	al,COL_SIGHT
+		call	HLineDraw
+
+		mov	cx,HUD_X_ORG-7
+		mov	bl,HUD_Y_ORG-48+8
+		mov	al,COL_SIGHT
+		call	SetPixel
+
+		mov	cx,HUD_X_ORG+7
+		mov	bl,HUD_Y_ORG-48+8
+		mov	al,COL_SIGHT
+		call	SetPixel
+
+		mov	cx,HUD_X_ORG-2
+		mov	dx,HUD_X_ORG+2
+		mov	bl,HUD_Y_ORG-48+5
+		mov	al,COL_SIGHT
+		call	HLineDraw
+
+		mov	cx,HUD_X_ORG-3
+		mov	bl,HUD_Y_ORG-48+4
+		mov	al,COL_SIGHT
+		call	SetPixel
+
+		mov	cx,HUD_X_ORG+3
+		mov	bl,HUD_Y_ORG-48+4
+		mov	al,COL_SIGHT
+		call	SetPixel
+
+;* left stroke
+
+		mov	cx,HUD_X_ORG-21
+		mov	dx,HUD_X_ORG-7
+		mov	bl,HUD_Y_ORG-48
+		mov	al,COL_SIGHT
+		call	HLineDraw
+
+		mov	cx,HUD_X_ORG-22
+		mov	bl,HUD_Y_ORG-48-2
+		mov	bh,HUD_Y_ORG-48+2
+		mov	al,COL_SIGHT
+		call	VLineDraw
+
+		mov	cx,HUD_X_ORG-17
+		mov	bl,HUD_Y_ORG-48-2
+		mov	bh,HUD_Y_ORG-48+2
+		mov	al,COL_SIGHT
+		call	VLineDraw
+
+		mov	cx,HUD_X_ORG-12
+		mov	bl,HUD_Y_ORG-48-2
+		mov	bh,HUD_Y_ORG-48+2
+		mov	al,COL_SIGHT
+		call	VLineDraw
+
+		mov	cx,HUD_X_ORG-11
+		mov	bl,HUD_Y_ORG-48-4
+		mov	bh,HUD_Y_ORG-48-3
+		mov	al,COL_SIGHT
+		call	VLineDraw
+
+		mov	cx,HUD_X_ORG-11
+		mov	bl,HUD_Y_ORG-48+3
+		mov	bh,HUD_Y_ORG-48+4
+		mov	al,COL_SIGHT
+		call	VLineDraw
+
+		mov	cx,HUD_X_ORG-10
+		mov	bl,HUD_Y_ORG-48-5
+		mov	al,COL_SIGHT
+		call	SetPixel
+
+		mov	cx,HUD_X_ORG-10
+		mov	bl,HUD_Y_ORG-48+5
+		mov	al,COL_SIGHT
+		call	SetPixel
+
+		mov	cx,HUD_X_ORG-6
+		mov	bl,HUD_Y_ORG-48-1
+		mov	bh,HUD_Y_ORG-48+1
+		mov	al,COL_SIGHT
+		call	VLineDraw
+
+		mov	cx,HUD_X_ORG-5
+		mov	bl,HUD_Y_ORG-48-2
+		mov	al,COL_SIGHT
+		call	SetPixel
+
+		mov	cx,HUD_X_ORG-5
+		mov	bl,HUD_Y_ORG-48+2
+		mov	al,COL_SIGHT
+		call	SetPixel
+
+;* right stroke
+
+		mov	cx,HUD_X_ORG+21
+		mov	dx,HUD_X_ORG+7
+		mov	bl,HUD_Y_ORG-48
+		mov	al,COL_SIGHT
+		call	HLineDraw
+
+		mov	cx,HUD_X_ORG+22
+		mov	bl,HUD_Y_ORG-48-2
+		mov	bh,HUD_Y_ORG-48+2
+		mov	al,COL_SIGHT
+		call	VLineDraw
+
+		mov	cx,HUD_X_ORG+17
+		mov	bl,HUD_Y_ORG-48-2
+		mov	bh,HUD_Y_ORG-48+2
+		mov	al,COL_SIGHT
+		call	VLineDraw
+
+		mov	cx,HUD_X_ORG+12
+		mov	bl,HUD_Y_ORG-48-2
+		mov	bh,HUD_Y_ORG-48+2
+		mov	al,COL_SIGHT
+		call	VLineDraw
+
+		mov	cx,HUD_X_ORG+11
+		mov	bl,HUD_Y_ORG-48-4
+		mov	bh,HUD_Y_ORG-48-3
+		mov	al,COL_SIGHT
+		call	VLineDraw
+
+		mov	cx,HUD_X_ORG+11
+		mov	bl,HUD_Y_ORG-48+3
+		mov	bh,HUD_Y_ORG-48+4
+		mov	al,COL_SIGHT
+		call	VLineDraw
+
+		mov	cx,HUD_X_ORG+10
+		mov	bl,HUD_Y_ORG-48-5
+		mov	al,COL_SIGHT
+		call	SetPixel
+
+		mov	cx,HUD_X_ORG+10
+		mov	bl,HUD_Y_ORG-48+5
+		mov	al,COL_SIGHT
+		call	SetPixel
+
+		mov	cx,HUD_X_ORG+6
+		mov	bl,HUD_Y_ORG-48-1
+		mov	bh,HUD_Y_ORG-48+1
+		mov	al,COL_SIGHT
+		call	VLineDraw
+
+		mov	cx,HUD_X_ORG+5
+		mov	bl,HUD_Y_ORG-48-2
+		mov	al,COL_SIGHT
+		call	SetPixel
+
+		mov	cx,HUD_X_ORG+5
+		mov	bl,HUD_Y_ORG-48+2
+		mov	al,COL_SIGHT
+		call	SetPixel
+
+		ret
+
+DrawStandby	ENDP
+
+DrawStandby2	PROC	NEAR
+		
+		;mov	si,OFFSET SetUp$
+		;call	Print$
+		
+		mov	si,OFFSET SetUp$
+		call	Print$
+		
+;* centre dot
+
+		mov	cx,HUD_X_ORG
+		mov	bl,HUD_Y_ORG-0
+		mov	al,COL_SIGHT
+		call	SetPixel
+
+;* up stroke
+
+		mov	cx,HUD_X_ORG
+		mov	bl,HUD_Y_ORG-0-17
+		mov	bh,HUD_Y_ORG-0-6
+		mov	al,COL_SIGHT
+		call	VLineDraw
+
+		mov	cx,HUD_X_ORG-2
+		mov	dx,HUD_X_ORG+2
+		mov	bl,HUD_Y_ORG-0-18
+		mov	al,COL_SIGHT
+		call	HLineDraw
+
+		mov	cx,HUD_X_ORG-2
+		mov	dx,HUD_X_ORG+2
+		mov	bl,HUD_Y_ORG-0-14
+		mov	al,COL_SIGHT
+		call	HLineDraw
+
+		mov	cx,HUD_X_ORG-3
+		mov	dx,HUD_X_ORG+3
+		mov	bl,HUD_Y_ORG-0-10
+		mov	al,COL_SIGHT
+		call	HLineDraw
+
+		mov	cx,HUD_X_ORG-6
+		mov	dx,HUD_X_ORG-4
+		mov	bl,HUD_Y_ORG-0-9
+		mov	al,COL_SIGHT
+		call	HLineDraw
+
+		mov	cx,HUD_X_ORG+4
+		mov	dx,HUD_X_ORG+6
+		mov	bl,HUD_Y_ORG-0-9
+		mov	al,COL_SIGHT
+		call	HLineDraw
+
+		mov	cx,HUD_X_ORG-7
+		mov	bl,HUD_Y_ORG-0-8
+		mov	al,COL_SIGHT
+		call	SetPixel
+
+		mov	cx,HUD_X_ORG+7
+		mov	bl,HUD_Y_ORG-0-8
+		mov	al,COL_SIGHT
+		call	SetPixel
+
+		mov	cx,HUD_X_ORG-2
+		mov	dx,HUD_X_ORG+2
+		mov	bl,HUD_Y_ORG-0-5
+		mov	al,COL_SIGHT
+		call	HLineDraw
+
+		mov	cx,HUD_X_ORG-3
+		mov	bl,HUD_Y_ORG-0-4
+		mov	al,COL_SIGHT
+		call	SetPixel
+
+		mov	cx,HUD_X_ORG+3
+		mov	bl,HUD_Y_ORG-0-4
+		mov	al,COL_SIGHT
+		call	SetPixel
+
+;* down stroke
+
+		mov	cx,HUD_X_ORG
+		mov	bl,HUD_Y_ORG-0+17
+		mov	bh,HUD_Y_ORG-0+6
+		mov	al,COL_SIGHT
+		call	VLineDraw
+
+		mov	cx,HUD_X_ORG-2
+		mov	dx,HUD_X_ORG+2
+		mov	bl,HUD_Y_ORG-0+18
+		mov	al,COL_SIGHT
+		call	HLineDraw
+
+		mov	cx,HUD_X_ORG-2
+		mov	dx,HUD_X_ORG+2
+		mov	bl,HUD_Y_ORG-0+14
+		mov	al,COL_SIGHT
+		call	HLineDraw
+
+		mov	cx,HUD_X_ORG-3
+		mov	dx,HUD_X_ORG+3
+		mov	bl,HUD_Y_ORG-0+10
+		mov	al,COL_SIGHT
+		call	HLineDraw
+
+		mov	cx,HUD_X_ORG-6
+		mov	dx,HUD_X_ORG-4
+		mov	bl,HUD_Y_ORG-0+9
+		mov	al,COL_SIGHT
+		call	HLineDraw
+
+		mov	cx,HUD_X_ORG+4
+		mov	dx,HUD_X_ORG+6
+		mov	bl,HUD_Y_ORG-0+9
+		mov	al,COL_SIGHT
+		call	HLineDraw
+
+		mov	cx,HUD_X_ORG-7
+		mov	bl,HUD_Y_ORG-0+8
+		mov	al,COL_SIGHT
+		call	SetPixel
+
+		mov	cx,HUD_X_ORG+7
+		mov	bl,HUD_Y_ORG-0+8
+		mov	al,COL_SIGHT
+		call	SetPixel
+
+		mov	cx,HUD_X_ORG-2
+		mov	dx,HUD_X_ORG+2
+		mov	bl,HUD_Y_ORG-0+5
+		mov	al,COL_SIGHT
+		call	HLineDraw
+
+		mov	cx,HUD_X_ORG-3
+		mov	bl,HUD_Y_ORG-0+4
+		mov	al,COL_SIGHT
+		call	SetPixel
+
+		mov	cx,HUD_X_ORG+3
+		mov	bl,HUD_Y_ORG-0+4
+		mov	al,COL_SIGHT
+		call	SetPixel
+
+;* left stroke
+
+		mov	cx,HUD_X_ORG-21
+		mov	dx,HUD_X_ORG-7
+		mov	bl,HUD_Y_ORG-0
+		mov	al,COL_SIGHT
+		call	HLineDraw
+
+		mov	cx,HUD_X_ORG-22
+		mov	bl,HUD_Y_ORG-0-2
+		mov	bh,HUD_Y_ORG-0+2
+		mov	al,COL_SIGHT
+		call	VLineDraw
+
+		mov	cx,HUD_X_ORG-17
+		mov	bl,HUD_Y_ORG-0-2
+		mov	bh,HUD_Y_ORG-0+2
+		mov	al,COL_SIGHT
+		call	VLineDraw
+
+		mov	cx,HUD_X_ORG-12
+		mov	bl,HUD_Y_ORG-0-2
+		mov	bh,HUD_Y_ORG-0+2
+		mov	al,COL_SIGHT
+		call	VLineDraw
+
+		mov	cx,HUD_X_ORG-11
+		mov	bl,HUD_Y_ORG-0-4
+		mov	bh,HUD_Y_ORG-0-3
+		mov	al,COL_SIGHT
+		call	VLineDraw
+
+		mov	cx,HUD_X_ORG-11
+		mov	bl,HUD_Y_ORG-0+3
+		mov	bh,HUD_Y_ORG-0+4
+		mov	al,COL_SIGHT
+		call	VLineDraw
+
+		mov	cx,HUD_X_ORG-10
+		mov	bl,HUD_Y_ORG-0-5
+		mov	al,COL_SIGHT
+		call	SetPixel
+
+		mov	cx,HUD_X_ORG-10
+		mov	bl,HUD_Y_ORG-0+5
+		mov	al,COL_SIGHT
+		call	SetPixel
+
+		mov	cx,HUD_X_ORG-6
+		mov	bl,HUD_Y_ORG-0-1
+		mov	bh,HUD_Y_ORG-0+1
+		mov	al,COL_SIGHT
+		call	VLineDraw
+
+		mov	cx,HUD_X_ORG-5
+		mov	bl,HUD_Y_ORG-0-2
+		mov	al,COL_SIGHT
+		call	SetPixel
+
+		mov	cx,HUD_X_ORG-5
+		mov	bl,HUD_Y_ORG-0+2
+		mov	al,COL_SIGHT
+		call	SetPixel
+
+;* right stroke
+
+		mov	cx,HUD_X_ORG+21
+		mov	dx,HUD_X_ORG+7
+		mov	bl,HUD_Y_ORG-0
+		mov	al,COL_SIGHT
+		call	HLineDraw
+
+		mov	cx,HUD_X_ORG+22
+		mov	bl,HUD_Y_ORG-0-2
+		mov	bh,HUD_Y_ORG-0+2
+		mov	al,COL_SIGHT
+		call	VLineDraw
+
+		mov	cx,HUD_X_ORG+17
+		mov	bl,HUD_Y_ORG-0-2
+		mov	bh,HUD_Y_ORG-0+2
+		mov	al,COL_SIGHT
+		call	VLineDraw
+
+		mov	cx,HUD_X_ORG+12
+		mov	bl,HUD_Y_ORG-0-2
+		mov	bh,HUD_Y_ORG-0+2
+		mov	al,COL_SIGHT
+		call	VLineDraw
+
+		mov	cx,HUD_X_ORG+11
+		mov	bl,HUD_Y_ORG-0-4
+		mov	bh,HUD_Y_ORG-0-3
+		mov	al,COL_SIGHT
+		call	VLineDraw
+
+		mov	cx,HUD_X_ORG+11
+		mov	bl,HUD_Y_ORG-0+3
+		mov	bh,HUD_Y_ORG-0+4
+		mov	al,COL_SIGHT
+		call	VLineDraw
+
+		mov	cx,HUD_X_ORG+10
+		mov	bl,HUD_Y_ORG-0-5
+		mov	al,COL_SIGHT
+		call	SetPixel
+
+		mov	cx,HUD_X_ORG+10
+		mov	bl,HUD_Y_ORG-0+5
+		mov	al,COL_SIGHT
+		call	SetPixel
+
+		mov	cx,HUD_X_ORG+6
+		mov	bl,HUD_Y_ORG-0-1
+		mov	bh,HUD_Y_ORG-0+1
+		mov	al,COL_SIGHT
+		call	VLineDraw
+
+		mov	cx,HUD_X_ORG+5
+		mov	bl,HUD_Y_ORG-0-2
+		mov	al,COL_SIGHT
+		call	SetPixel
+
+		mov	cx,HUD_X_ORG+5
+		mov	bl,HUD_Y_ORG-0+2
+		mov	al,COL_SIGHT
+		call	SetPixel
+
+		ret
+
+DrawStandby2	ENDP
 
 PANCODE		ENDS
 

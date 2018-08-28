@@ -86,6 +86,7 @@ RotateSwitch	DW	RotateNull	;ROTATE_NULL
 		DW	RotateViewUp	;ROTATE_VIEW_UP
 		DW	RotateViewDn	;ROTATE_VIEW_DN
 		DW	RotateViewBk	;ROTATE_VIEW_BK
+		DW	RotateViewFt	;ROTATE_VIEW_FT
 
 DATA		ENDS
 
@@ -1772,7 +1773,7 @@ RotateView	PROC	NEAR
 ;---------------------------
 RotateNull	LABEL	NEAR
 ;---------------------------
-
+		
 		ret
 
 ;---------------------------
@@ -1951,6 +1952,41 @@ RotateViewBk	LABEL	NEAR
 
 		ret
 
+;---------------------------
+RotateViewFt	LABEL	NEAR
+;---------------------------
+
+;* xe = -xe
+
+		neg	A1
+		neg	A2
+		neg	A3
+
+;* ye = -ye
+
+		neg	A4
+		neg	A5
+		neg	A6
+
+;* roll = -roll
+
+		mov	ax,V_VIEW.VP_ROLL
+		neg	ax
+		and	ax,511
+		mov	V_VIEW.VP_ROLL,ax
+
+;* pitch = -pitch
+
+		mov	ax,V_VIEW.VP_PITCH
+		neg	ax
+		and	ax,511
+		mov	V_VIEW.VP_PITCH,ax
+
+		call	CalcAngles
+
+		ret
+		
+		
 ;---------------------------
 ContRotate	LABEL	NEAR
 ;---------------------------

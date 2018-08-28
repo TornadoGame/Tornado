@@ -64,6 +64,7 @@ ROTATE_VIEW_LT	EQU	4		;look left (90)
 ROTATE_VIEW_UP	EQU	6		;look up (45)
 ROTATE_VIEW_DN	EQU	8		;look down (90)
 ROTATE_VIEW_BK	EQU	10		;look back (90)
+ROTATE_VIEW_FT	EQU	12		;look back (90)
 
 ;---------------------
 ;* sector grid equates

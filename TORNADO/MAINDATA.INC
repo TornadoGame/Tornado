@@ -33,6 +33,14 @@ SND_SBLASTER	EQU	4		;SoundBlaster
 SND_ADLIB	EQU	6		;AdLib
 SND_ROLAND	EQU	8		;Roland LAPC1
 
+;-------------------
+;* shake effect flag
+;-------------------
+
+SHAKE_OPT_OFF	EQU	0		;shake effects off
+SHAKE_OPT_ON	EQU	1		;shake effects on
+
+
 ;-------------
 ;* sound flags
 ;-------------
@@ -62,12 +70,16 @@ VIEW_LOOKUP	EQU	26		;pilot's look up
 VIEW_DEMO	EQU	28		;demo view
 VIEW_DESTROYED	EQU	30		;Tornado destroyed view
 VIEW_WEAPON	EQU	32		;weapon view
+VIEW_ZRK EQU 34         ;ZRK ROMB (SA-8) to Tornado view
+VIEW_ZSU1 EQU 36         ;ZSU-23-4 Shilka to Tornado view1
+VIEW_ZSU2 EQU 38         ;ZSU-23-4 Shilka to Tornado view2
+VIEW_ZRK_AAA EQU 40         ;ZSU-23-4 Shilka to Tornado view2
 
 ;-------------
 ;* panel modes
 ;-------------
 
-PILOTPAN	EQU	0   		;pilot's front panel
+PILOTPAN	EQU	0   	;pilot's front panel
 PSIDEPAN	EQU	2		;pilot's left and right side panel
 NAVIGPAN	EQU	4		;navigator's front panel
 NSIDEPAN	EQU	6		;navigator's left and right side panel
@@ -528,7 +540,7 @@ AC_ZFINE	DW	0		;zft fine
 AC_HFINE	DW	0		;heading fine (fine pdegs)
 AC_PFINE	DW	0		;pitch fine (fine pdegs)
 AC_RFINE	DW	0		;roll fine (fine pdegs)
-AC_VTAS     	DW	0		;true airspeed (*8)
+AC_VTAS     	DW	0		;true airspeed ( * 8)
 AC_VTAS_FINE	DW	0		;true airspeed fine
 AC_LIFT_VCTR	DW	0		;lift vector (fine pdegs)
 AC_AB_DELAY	DB	0		;reheat animation inhibit delay (1/100ths sec)
@@ -667,7 +679,7 @@ HC_ZFINE	DW	0		;zft fine
 HC_HFINE	DW	0		;heading fine (fine pdegs)
 HC_PFINE	DW	0		;pitch fine (fine pdegs)
 HC_RFINE	DW	0		;roll fine (fine pdegs)
-HC_VTAS     	DW	0		;true airspeed (*8)
+HC_VTAS     	DW	0		;true airspeed ( *8)
 HC_VTAS_FINE	DW	0		;true airspeed fine
 HC_LIFT_VCTR	DW	0		;lift vector (fine pdegs)
 HC_ACCEL_PFINE	DW	0		;pitch wrt accel (fine pdegs)
@@ -738,7 +750,8 @@ HFLG_REL_FLARE	EQU	0000000000001000b	;released flare
 ;* ground object / static mobile status flag (encoded in animation byte)
 ;-------------------------------------------
 
-OBJECT_LIGHTS	EQU	00000001b	;1 = night lighting on
+;OBJECT_LIGHTS	EQU	00000001b	;1 = night lighting on
+OBJECT_LIGHTS	EQU	00000000b	;0 = night lighting off
 
 OBJECT_ENEMY	EQU	01000000b	;1 = enemy
 OBJECT_DEAD	EQU	10000000b	;1 = dead
@@ -1277,12 +1290,14 @@ DAM_DEBRIS8	EQU	00011100b	;embankment crater
 
 ;* object explosion size
 
-DAM_EXPLO_MASK	EQU	01100000b	;(DO NOT CHANGE)
+;DAM_EXPLO_MASK	EQU	01100000b	;(DO NOT CHANGE)
+DAM_EXPLO_MASK	EQU	11111111b	;(DO NOT CHANGE)
 
 DAM_EXPLO1	EQU	00000000b	;burn only
 DAM_EXPLO2	EQU	00100000b	;crater size 1 * 2
 DAM_EXPLO3	EQU	01000000b	;crater size 2 * 2
 DAM_EXPLO4	EQU	01100000b	;crater size 2 * 4
+
 
 ;* object invalid (not a valid target)
 

@@ -18,7 +18,10 @@
 		OPTION	M510		;<<<<< MASM v5.10 <<<<<
 
 		PUBLIC	UpdateSAM
-
+		PUBLIC SAM_VIEW
+EXTRN	InCockpit:BYTE
+EXTRN	LaunchSound:FAR
+EXTRN	ExploSound3:FAR
 		EXTRN	RandX:FAR
 		EXTRN	CalcSlantRange:FAR
 		EXTRN	CalcIntercept:FAR
@@ -257,12 +260,12 @@ SAMLocated:	mov	ax,RWRThreats[bp].RWR_XSEC
 
 		mov	SAM_VIEW.VP_HDG,bx
 
-;* note: The missile launch pitch angle is always set to 45ø (as opposed to
+;* note: The missile launch pitch angle is always set to 45?(as opposed to
 ;*       calculating the launch angle). This improves the visual effect and
 ;*       deliberately degrades the missile performance (especially at close
 ;*       range).
 
-		mov	SAM_VIEW.VP_PITCH,64	;45ø
+		mov	SAM_VIEW.VP_PITCH,64
 
 ;* rotate object
 
@@ -284,6 +287,10 @@ SAMLocated:	mov	ax,RWRThreats[bp].RWR_XSEC
 		mov	di,OFFSET M_MOBILE
 
 		call	LaunchMissile
+		test InCockpit,1
+		jnz @F
+		call    LaunchSound		
+@@:			
 		jc	SAMExit	    	;launch fail ->
 
 ;* create some smoke

@@ -54,7 +54,7 @@
 ;****************************************************************************
 
 		OPTION	M510		;<<<<< MASM v5.10 <<<<<
-
+PUBLIC FadePalette
 		PUBLIC	VGA_VMode
 		PUBLIC	VGA_DLoad
 		PUBLIC	VGA_SetPx
@@ -87,7 +87,7 @@
 		PUBLIC	ReadDACBlock
 		PUBLIC	FadeOut
 		PUBLIC	QFadeOut
-		PUBLIC	FadeIn
+		PUBLIC	FadeIn 
 		PUBLIC	QFadeIn
 		PUBLIC	InstantFadeOut
 		PUBLIC	InstantFadeIn
@@ -122,13 +122,14 @@
 		PUBLIC	ShakeTimer
 		PUBLIC	HSHAKE_OFF
 		PUBLIC	HSHAKE_LO
+		PUBLIC	HSHAKE_VERY_LO		
 		PUBLIC	HSHAKE_HI
 		PUBLIC	HShake
 		PUBLIC	VSHAKE_OFF
 		PUBLIC	VSHAKE_LO
+		PUBLIC	VSHAKE_VERY_LO		
 		PUBLIC	VSHAKE_HI
 		PUBLIC	VShake
-
 		EXTRN	ResetMouse:FAR
 		EXTRN	FastRandX:FAR
 
@@ -417,6 +418,10 @@ HShake		DB	HSHAKE_OFF
 VSHAKE_OFF	EQU	0000b
 VSHAKE_LO	EQU	0001b
 VSHAKE_HI	EQU	0011b
+
+HSHAKE_VERY_LO	EQU	0001b
+VSHAKE_VERY_LO	EQU	0001b
+
 
 VShake		DB	VSHAKE_OFF
 
@@ -3577,7 +3582,7 @@ ReadDACBlock	ENDP
 ;*       FadeFlag
 ;* kill: assume all
 
-FadePalette	PROC	NEAR
+FadePalette	PROC	FAR  ;formerly NEAR
 
 		push	ds
 		push	es
@@ -3950,7 +3955,7 @@ FadeIn		PROC	FAR
 		mov	ax,CountDown
 		test	ax,ax
 		jnz	@B
-
+        
 		mov	FadeLevel3,al
 
 		call	UpdateFade
@@ -4109,10 +4114,10 @@ FadeDown	PROC	FAR
 		call	UpdateFade
 
 		mov	ax,Frames
-		cmp	ax,96
+		cmp	ax,12
 		jb	@B
 
-		mov	FadeLevel3,96
+		mov	FadeLevel3,12
 
 		call	UpdateFade
 
@@ -4136,7 +4141,7 @@ FadeUp		PROC	FAR
 
 		xor	ax,ax
 
-		mov	FadeLevel3,96
+		mov	FadeLevel3,12
 
 		mov	FadeRCol3,al
 		mov	FadeGCol3,al
@@ -4145,7 +4150,7 @@ FadeUp		PROC	FAR
 		mov	FadeStart3,ax
 		mov	FadeCount3,256
 
-		mov	ax,96
+		mov	ax,12
 
 		mov	CountDown,ax
 

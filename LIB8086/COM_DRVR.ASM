@@ -307,14 +307,14 @@ VideoBufSize	DW	VIDEO_BUF_SIZE
 
 SPRITES_ON	EQU	1		;1 = sprite routines enabled
 
-HGC		EQU	0		;Hercules Graphics Card
-HEM		EQU	2	       	;Hercules emulated on CGA
+VGA		EQU	0		;Video Graphics Adapter
+HEM		EQU	2	     ;Hercules emulated on CGA
 CGA		EQU	4		;Colour Graphics Adapter
 EGA		EQU	6		;Enhanced Graphics Adapter
 TAN		EQU	8		;Tandy
 TEM		EQU	10		;Tandy emulated on EGA
 V16		EQU	12		;16 colour VGA
-VGA		EQU	14		;Video Graphics Adapter
+HGC		EQU	14		;Hercules Graphics Card
 
 WorkScrPtr	DW	0		;ptr to work screen segment
 RealScrPtr	DW	0		;ptr to real screen segment
@@ -347,14 +347,7 @@ SCR_TYPE_0	EQU	0		;4 colour screens
 SCR_TYPE_1	EQU	1		;16 colour screens
 SCR_TYPE_2	EQU	2		;256 colour screens
 
-ScreenTypeTable	DW	SCR_TYPE_0	;HGC
-		DW	SCR_TYPE_0	;HEM
-		DW	SCR_TYPE_0	;CGA
-		DW	SCR_TYPE_1	;EGA
-		DW	SCR_TYPE_1	;TAN
-		DW	SCR_TYPE_1	;TEM
-		DW	SCR_TYPE_1	;V16
-		DW	SCR_TYPE_2	;VGA
+ScreenTypeTable	DW	SCR_TYPE_2	;VGA
 
 ScreenType	DW	SCR_TYPE_1
 
@@ -372,25 +365,13 @@ Palette		DB	256 DUP(0ffh)	;colour palette
 
 ;* pointers to default palettes for screen modes
 
-PaletteTable	DW	OFFSET HGC_Palette1	;HGC
-		DW	OFFSET HGC_Palette1	;HEM
-		DW	OFFSET CGA_Palette1	;CGA
-		DW	OFFSET TAN_Palette1	;EGA
-		DW	OFFSET TAN_Palette1	;TAN
-		DW	OFFSET TAN_Palette1	;TEM
-		DW	OFFSET TAN_Palette1	;V16
-		DW	OFFSET VGA_Palette1	;VGA
+PaletteTable	DW	OFFSET VGA_Palette1	;VGA
+		
 
 ;* offsets in attribute data block for screen modes
 
-AttrTable	DW	0		;HGC
-		DW	0		;HEM
+AttrTable	DW	6		;VGA
 		DW	2		;CGA
-		DW	4		;EGA
-		DW	4		;TAN
-		DW	4		;TEM
-		DW	4		;V16
-		DW	6		;VGA
 
 ;* print character variables
 
@@ -416,14 +397,8 @@ SpritePtr	DW	0		;ptr
 
 ;* SSprite clip divide x table
 
-ClipXTable	DB	2,0		;HGC (x/4) 
-		DB	2,0		;HEM (x/4)
-		DB	2,0		;CGA (x/4)
-		DB	3,0		;EGA (x/8)
-		DB	1,0		;TAN (x/2)
-		DB	1,0		;TEM (x/2)
-		DB	3,0		;V16 (x/8)
-		DB	2,0		;VGA (x/4)
+ClipXTable	DB	2,0		;VGA (x/4)
+;		DB	2,0		;CGA (x/4)
 
 ;* clip data initialized to maximum screen size
 
@@ -471,159 +446,61 @@ JumpInitList	DW	_SetVideoMode
 
 _SetVideoMode	DW	Null
 
-	 	DW	HGC_VMode	;HGC
-		DW	HEM_VMode	;HEM
-		DW	CGA_VMode	;CGA
-		DW	EGA_VMode	;EGA
-		DW	TAN_VMode	;TAN
-		DW	TEM_VMode	;TEM
-		DW	EGA_VMode	;V16
 		DW	VGA_VMode	;VGA
 
 _DownLoad	DW	Null
 
-		DW	HGC_DLoad	;HGC
-		DW	CGA_DLoad	;HEM
-		DW	CGA_DLoad	;CGA
-		DW	EGA_DLoad	;EGA
-		DW	TAN_DLoad	;TAN
-		DW	TEM_DLoad	;TEM
-		DW	EGA_DLoad	;V16
 		DW	VGA_DLoad	;VGA
 
 _SetPixel	DW	Null
 
-		DW	CGA_SetPx	;HGC
-		DW	CGA_SetPx	;HEM
-		DW	CGA_SetPx	;CGA
-		DW	EGA_SetPx	;EGA
-		DW	TAN_SetPx	;TAN
-		DW	TAN_SetPx	;TEM
-		DW	EGA_SetPx	;V16
 		DW	VGA_SetPx	;VGA
 
 _LineDraw	DW	Null
 
-		DW	CGA_Line	;HGC
-		DW	CGA_Line	;HEM
-		DW	CGA_Line	;CGA
-		DW	EGA_Line	;EGA
-		DW	TAN_Line	;TAN
-		DW	TAN_Line	;TEM
-		DW	EGA_Line	;V16
 		DW	VGA_Line	;VGA
 
 _VLineDraw	DW	Null
 
-		DW	CGA_VLine	;HGC
-		DW	CGA_VLine	;HEM
-		DW	CGA_VLine	;CGA
-		DW	EGA_VLine	;EGA
-		DW	TAN_VLine	;TAN
-		DW	TAN_VLine	;TEM
-		DW	EGA_VLine	;V16
 		DW	VGA_VLine	;VGA
 
 _HLineDraw	DW	Null
 
-		DW	CGA_HLine	;HGC
-		DW	CGA_HLine	;HEM
-		DW	CGA_HLine	;CGA
-		DW	EGA_HLine	;EGA
-		DW	TAN_HLine	;TAN
-		DW	TAN_HLine	;TEM
-		DW	EGA_HLine	;V16
 		DW	VGA_HLine	;VGA
 
 _PolyFill	DW	Null
 
-	 	DW	CGA_PFill 	;HGC
-		DW	CGA_PFill 	;HEM
-		DW	CGA_PFill 	;CGA
-		DW	EGA_PFill	;EGA
-		DW	TAN_PFill	;TAN
-		DW	TAN_PFill	;TEM
-		DW	EGA_PFill	;V16
-		DW	VGA_PFill	;VGA
+	 	DW	VGA_PFill	;VGA
 
 _MeshFill	DW	Null
 
-	 	DW	CGA_MFill 	;HGC
-		DW	CGA_MFill 	;HEM
-		DW	CGA_MFill 	;CGA
-		DW	EGA_MFill	;EGA
-		DW	TAN_MFill	;TAN
-		DW	TAN_MFill	;TEM
-		DW	EGA_MFill	;V16
-		DW	VGA_MFill	;VGA
+	 	DW	VGA_MFill	;VGA
 
 _SmokeFill	DW	Null
 
-	 	DW	CGA_SFill 	;HGC
-		DW	CGA_SFill 	;HEM
-		DW	CGA_SFill 	;CGA
-		DW	EGA_SFill	;EGA
-		DW	TAN_SFill	;TAN
-		DW	TAN_SFill	;TEM
-		DW	EGA_SFill	;V16
-		DW	VGA_SFill	;VGA
+	 	DW	VGA_SFill	;VGA
 
 _PrintChar1	DW	Null
 
-	 	DW	CGA_PrtC1 	;HGC
-		DW	CGA_PrtC1 	;HEM
-		DW	CGA_PrtC1 	;CGA
-		DW	EGA_PrtC1	;EGA
-		DW	TAN_PrtC1	;TAN
-		DW	TAN_PrtC1	;TEM
-		DW	EGA_PrtC1	;V16
-		DW	VGA_PrtC1	;VGA
+	 	DW	VGA_PrtC1	;VGA
 
 _PrintChar2	DW	Null
 
-	 	DW	CGA_PrtC2 	;HGC
-		DW	CGA_PrtC2 	;HEM
-		DW	CGA_PrtC2 	;CGA
-		DW	EGA_PrtC2	;EGA
-		DW	TAN_PrtC2	;TAN
-		DW	TAN_PrtC2	;TEM
-		DW	EGA_PrtC2	;V16
-		DW	VGA_PrtC2	;VGA
+	 	DW	VGA_PrtC2	;VGA
 
 _PrintChar3	DW	Null
 
-	 	DW	CGA_PrtC3 	;HGC
-		DW	CGA_PrtC3 	;HEM
-		DW	CGA_PrtC3 	;CGA
-		DW	EGA_PrtC3	;EGA
-		DW	TAN_PrtC3	;TAN
-		DW	TAN_PrtC3	;TEM
-		DW	EGA_PrtC3	;V16
-		DW	VGA_PrtC3	;VGA
+	 	DW	VGA_PrtC3	;VGA
 
 _SSprite	DW	Null
 
 		IF	SPRITES_ON
 
-	 	DW	CGA_SSprite 	;HGC
-		DW	CGA_SSprite 	;HEM
-		DW	CGA_SSprite 	;CGA
-		DW	EGA_SSprite	;EGA
-		DW	TAN_SSprite	;TAN
-		DW	TAN_SSprite	;TEM
-		DW	EGA_SSprite	;V16
-		DW	VGA_SSprite	;VGA
+	 	DW	VGA_SSprite	;VGA
 
 		ELSE
 
-	 	DW	Null	 	;HGC
-		DW	Null	 	;HEM
-		DW	Null	 	;CGA
-		DW	Null		;EGA
-		DW	Null		;TAN
-		DW	Null		;TEM
-		DW	Null		;V16
-		DW	Null		;VGA
+	 	DW	Null	 	;VGA
 
 		ENDIF
 
@@ -631,25 +508,11 @@ _MSprite	DW	Null
 
 		IF	SPRITES_ON
 
-	 	DW	CGA_MSprite 	;HGC
-		DW	CGA_MSprite 	;HEM
-		DW	CGA_MSprite 	;CGA
-		DW	EGA_MSprite	;EGA
-		DW	TAN_MSprite	;TAN
-		DW	TAN_MSprite	;TEM
-		DW	EGA_MSprite	;V16
-		DW	VGA_MSprite	;VGA
+	 	DW	VGA_MSprite	;VGA
 
 		ELSE
 
-	 	DW	Null	 	;HGC
-		DW	Null	 	;HEM
-		DW	Null	 	;CGA
-		DW	Null		;EGA
-		DW	Null		;TAN
-		DW	Null		;TEM
-		DW	Null		;V16
-		DW	Null		;VGA
+	 	DW	Null	 	;VGA
 
 		ENDIF
 
@@ -657,25 +520,11 @@ _BSprite	DW	Null
 
 		IF	SPRITES_ON
 
-	 	DW	CGA_BSprite 	;HGC
-		DW	CGA_BSprite 	;HEM
-		DW	CGA_BSprite 	;CGA
-		DW	EGA_BSprite	;EGA
-		DW	TAN_BSprite	;TAN
-		DW	TAN_BSprite	;TEM
-		DW	EGA_BSprite	;V16
-		DW	VGA_BSprite	;VGA
+	 	DW	VGA_BSprite	;VGA
 
 		ELSE
 
-	 	DW	Null	 	;HGC
-		DW	Null	 	;HEM
-		DW	Null	 	;CGA
-		DW	Null		;EGA
-		DW	Null		;TAN
-		DW	Null		;TEM
-		DW	Null		;V16
-		DW	Null		;VGA
+	 	DW	Null	 	;VGA
 
 		ENDIF
 
@@ -683,25 +532,11 @@ _QSprite	DW	Null
 
 		IF	SPRITES_ON
 
-	 	DW	CGA_QSprite 	;HGC
-		DW	CGA_QSprite 	;HEM
-		DW	CGA_QSprite 	;CGA
-		DW	EGA_QSprite	;EGA
-		DW	TAN_QSprite	;TAN
-		DW	TAN_QSprite	;TEM
-		DW	EGA_QSprite	;V16
-		DW	VGA_QSprite	;VGA
+	 	DW	VGA_QSprite	;VGA
 
 		ELSE
 
-	 	DW	Null	 	;HGC
-		DW	Null	 	;HEM
-		DW	Null	 	;CGA
-		DW	Null		;EGA
-		DW	Null		;TAN
-		DW	Null		;TEM
-		DW	Null		;V16
-		DW	Null		;VGA
+	 	DW	Null	 	;VGA
 
 		ENDIF
 
@@ -709,25 +544,11 @@ _InitSSprites	DW	Null
 
 		IF	SPRITES_ON
 
-	 	DW	CGA_InitSS 	;HGC
-		DW	CGA_InitSS 	;HEM
-		DW	CGA_InitSS 	;CGA
-		DW	EGA_InitSS	;EGA
-		DW	TAN_InitSS	;TAN
-		DW	TAN_InitSS	;TEM
-		DW	EGA_InitSS	;V16
-		DW	VGA_InitSS	;VGA
+	 	DW	VGA_InitSS	;VGA
 
 		ELSE
 
-	 	DW	Null	 	;HGC
-		DW	Null	 	;HEM
-		DW	Null	 	;CGA
-		DW	Null		;EGA
-		DW	Null		;TAN
-		DW	Null		;TEM
-		DW	Null		;V16
-		DW	Null		;VGA
+	 	DW	Null	 	;VGA
 
 		ENDIF
 
@@ -735,25 +556,11 @@ _InitMSprites	DW	Null
 
 		IF	SPRITES_ON
 
-	 	DW	CGA_InitMS 	;HGC
-		DW	CGA_InitMS 	;HEM
-		DW	CGA_InitMS 	;CGA
-		DW	EGA_InitMS	;EGA
-		DW	TAN_InitMS	;TAN
-		DW	TAN_InitMS	;TEM
-		DW	EGA_InitMS	;V16
-		DW	VGA_InitMS	;VGA
+	 	DW	VGA_InitMS	;VGA
 
 		ELSE
 
-	 	DW	Null	 	;HGC
-		DW	Null	 	;HEM
-		DW	Null	 	;CGA
-		DW	Null		;EGA
-		DW	Null		;TAN
-		DW	Null		;TEM
-		DW	Null		;V16
-		DW	Null		;VGA
+	 	DW	Null	 	;VGA
 
 		ENDIF
 
@@ -761,104 +568,41 @@ _InitQSprites	DW	Null
 
 		IF	SPRITES_ON
 
-	 	DW	Null	 	;HGC
-		DW	Null	 	;HEM
-		DW	Null	 	;CGA
-		DW	EGA_InitQS	;EGA
-		DW	Null		;TAN
-		DW	Null		;TEM
-		DW	EGA_InitQS	;V16
-		DW	VGA_InitQS	;VGA
+	 	DW	VGA_InitQS	;VGA
 
 		ELSE
 
-	 	DW	Null	 	;HGC
-		DW	Null	 	;HEM
-		DW	Null	 	;CGA
-		DW	Null		;EGA
-		DW	Null		;TAN
-		DW	Null		;TEM
-		DW	Null		;V16
-		DW	Null		;VGA
+	 	DW	Null	 	;VGA
 
 		ENDIF
 
 _BlockFill   	DW	Null
 
-	 	DW	CGA_BFill 	;HGC
-		DW	CGA_BFill 	;HEM
-		DW	CGA_BFill 	;CGA
-		DW	EGA_BFill	;EGA
-		DW	TAN_BFill	;TAN
-		DW	TAN_BFill	;TEM
-		DW	EGA_BFill	;V16
-		DW	VGA_BFill	;VGA
+	 	DW	VGA_BFill	;VGA
 
 _SaveMouseBGnd 	DW	Null
 
-	 	DW	CGA_SaveMouse 	;HGC
-		DW	CGA_SaveMouse 	;HEM
-		DW	CGA_SaveMouse 	;CGA
-		DW	EGA_SaveMouse	;EGA
-		DW	TAN_SaveMouse	;TAN
-		DW	TAN_SaveMouse	;TEM
-		DW	EGA_SaveMouse	;V16
-		DW	VGA_SaveMouse	;VGA
+	 	DW	VGA_SaveMouse	;VGA
 
 _LoadMouseBGnd 	DW	Null
 
-	 	DW	CGA_LoadMouse 	;HGC
-		DW	CGA_LoadMouse 	;HEM
-		DW	CGA_LoadMouse 	;CGA
-		DW	EGA_LoadMouse	;EGA
-		DW	TAN_LoadMouse	;TAN
-		DW	TAN_LoadMouse	;TEM
-		DW	EGA_LoadMouse	;V16
-		DW	VGA_LoadMouse	;VGA
+	 	DW	VGA_LoadMouse	;VGA
 
 _SaveScreen 	DW	Null
 
-	 	DW	CGA_SaveScreen	;HGC
-		DW	CGA_SaveScreen	;HEM
-		DW	CGA_SaveScreen	;CGA
-		DW	EGA_SaveScreen	;EGA
-		DW	TAN_SaveScreen	;TAN
-		DW	TAN_SaveScreen	;TEM
-		DW	EGA_SaveScreen	;V16
-		DW	VGA_SaveScreen	;VGA
+	 	DW	VGA_SaveScreen	;VGA
 
 _LoadScreen 	DW	Null
 
-	 	DW	CGA_LoadScreen	;HGC
-		DW	CGA_LoadScreen	;HEM
-		DW	CGA_LoadScreen	;CGA
-		DW	EGA_LoadScreen	;EGA
-		DW	TAN_LoadScreen	;TAN
-		DW	TAN_LoadScreen	;TEM
-		DW	EGA_LoadScreen	;V16
-		DW	VGA_LoadScreen	;VGA
+	 	DW	VGA_LoadScreen	;VGA
 
 _UncompressPic 	DW	Null
 
-	 	DW	CGA_UncompPic	;HGC
-		DW	CGA_UncompPic	;HEM
-		DW	CGA_UncompPic	;CGA
-		DW	EGA_UncompPic	;EGA
-		DW	TAN_UncompPic	;TAN
-		DW	TAN_UncompPic	;TEM
-		DW	EGA_UncompPic	;V16
-		DW	Null		;VGA
+	 	DW	Null		;VGA
 
 _HorizonFill 	DW	Null
 
-	 	DW	CGA_HFill	;HGC
-		DW	CGA_HFill	;HEM
-		DW	CGA_HFill	;CGA
-		DW	EGA_HFill	;EGA
-		DW	TAN_HFill	;TAN
-		DW	TAN_HFill	;TEM
-		DW	EGA_HFill	;V16
-		DW	VGA_HFill	;VGA
+	 	DW	VGA_HFill	;VGA
 
 DATA		ENDS
 

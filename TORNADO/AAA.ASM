@@ -25,7 +25,16 @@
 		OPTION	M510		;<<<<< MASM v5.10 <<<<<
 
 		PUBLIC	UpdateAAA
+PUBLIC AAA_VIEW1
+PUBLIC AAA_VIEW2
+EXTRN   CockpitViews:BYTE	
+EXTRN	InWeaponView:BYTE
+EXTRN	InCockpit:BYTE
+EXTRN	CannonSound:FAR
 
+;EXTRN	ExploSound2:FAR
+;EXTRN	ExploSound3:FAR
+		
 		EXTRN	RandX:FAR
 		EXTRN	CalcSlantRange:FAR
 		EXTRN	CalcIntercept:FAR
@@ -63,6 +72,8 @@
 
 		EXTRN	RWRThreats:RADARS
 
+		EXTRN	WPN_Weapon:WEAPON
+		
 ;============================================================================
 
 DATA		SEGMENT PARA PUBLIC 'DATA'
@@ -628,7 +639,15 @@ SetAAAPitch:	mov	[si].VP_PITCH,ax
 		mov	di,-1		;not mobile
 
 		call	FireCannon
+		
+		;test CockpitViews,1
+		;jnz	@F
 
+		;test InWeaponView,1	
+		;jz	@F		
+		;call    ExploSound2
+		;call CannonSound
+;@@:	
 AAAFireExit:	ret
 
 AAAFire		ENDP

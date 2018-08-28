@@ -27,7 +27,7 @@
 		EXTRN	InitCtrlDevice:FAR
 		EXTRN	SuspendSound:FAR
 		EXTRN	ResumeSound:FAR
-
+EXTRN	ShakeUp:BYTE
 		EXTRN	SecScanCnt1:WORD
 		EXTRN	SecScanOff1:WORD
 		EXTRN	SecScanCnt2:WORD
@@ -43,7 +43,7 @@
 		EXTRN	IronWork:BYTE
 		EXTRN	SoundOption:BYTE
 		EXTRN	KF_Range:BYTE
-		EXTRN	KF_GndText:BYTE
+		;EXTRN	KF_GndText:BYTE
 		EXTRN	KF_HillText:BYTE
 		EXTRN	KF_Clouds:BYTE
 		EXTRN	KF_Horizon:BYTE
@@ -622,7 +622,7 @@ UserVisOptions	PROC	FAR
 
 		KTEST	KF_Range	;adjust visibility?
 		jz	SkipRange	;no ->
-
+jmp SkipRange ;Added by Frankie Kam on 25th April 2018
 		mov	ax,SecScanCnt1
 		add	ax,2
 		cmp	ax,15		;wrap around?
@@ -642,16 +642,16 @@ UserVisOptions	PROC	FAR
 ;* ground
 ;--------
 
-SkipRange:	KFETCH	KF_GndText
-		xor	GndTextEnabled,al
-		xor	TreesEnabled,al
+SkipRange:	;KFETCH	KF_GndText
+		;xor	GndTextEnabled,al
+		;xor	TreesEnabled,al
 
 ;-------
 ;* hills
 ;-------
-
-		KFETCH	KF_HillText
-		xor	HillTextEnabled,al
+        ;Commented off by Frankie Kam on 23/7/2018
+		;KFETCH	KF_HillText
+		;xor	HillTextEnabled,al
 
 ;-----
 ;* sky
@@ -659,13 +659,22 @@ SkipRange:	KFETCH	KF_GndText
 
 	 	KFETCH	KF_Clouds
 		xor	CloudsEnabled,al
-		xor	StarsEnabled,al
+		
+		;mov	al,SoundOption
+		;inc	al
+		;cmp	al,3		;wrap around?
+		;jb	@F		;no ->
+		;xor	al,al
+;@@:		mov	SoundOption,al		
+		
+		;xor	StarsEnabled,al
 
 ;---------
 ;* horizon
 ;---------
 
 		KFETCH	KF_Horizon
+	    ;xor	ShakeUp,al
 		xor	GradEnabled,al
 
 ;--------------------
@@ -674,7 +683,7 @@ SkipRange:	KFETCH	KF_GndText
 
 		KTEST	KF_Minimise	;minimise / restore?
 		_JZ	MinimiseOk	;no ->
-
+jmp MinimiseOk ;Added by Frankie Kam on 25th April 2018
 		xor	Minimise,1	;minimise or restore?
 		jz	@F		;restore ->
 

@@ -28,7 +28,7 @@
 		EXTRN	LastFrame:WORD
 
 		EXTRN	KF_CancelAttn:BYTE
-
+EXTRN   CockpitViews:BYTE
 ;============================================================================
 
 		INCLUDE	MAINDATA.INC
@@ -121,8 +121,11 @@ CheckFailures	PROC	NEAR
 		cmp	ax,PrevAmbWarn2	;new amb warning?
 		je	SkipSound	;no ->
 
-@@:		call	AttentionSound
-
+@@:		
+         test CockpitViews,0
+		 jnz	@F
+         call	AttentionSound
+@@:
 SkipSound:	mov	ax,AttnTimer	;update timer
 		sub	ax,LastFrame
 		jnc	@F

@@ -59,6 +59,7 @@
 		PUBLIC	TreeLayer2
 		PUBLIC	TreeLayer3
 		PUBLIC	TreeLayer4
+		
 		PUBLIC	MobileLayer1
 
 ;============================================================================
@@ -177,7 +178,7 @@ TreeLayer3	LABEL	BYTE
 TreeLayer4	LABEL	BYTE
 
 		INCLUDE	MAP\LAYERS\TREE4.INC
-
+			
 MobileLayer1	LABEL	BYTE
 
 		INCLUDE	MAP\LAYERS\MOBILE1.INC

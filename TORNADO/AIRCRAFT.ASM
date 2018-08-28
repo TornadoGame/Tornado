@@ -9,7 +9,7 @@
 ;* 18.03.1993 - KJB - Drone combat added.
 ;* 
 ;* Allied Aircraft 	vs	Enemy Aircraft		Role
-;* ÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄ 		ÄÄÄÄÄÄÄÄÄÄÄÄÄÄ		ÄÄÄÄ
+;* ÄÄÄÄÄÄÄÄÄÄÄÄÄÄ?		ÄÄÄÄÄÄÄÄÄÄÄÄÄÄ		ÄÄÄÄ
 ;* GR4 Tornado		vs	Mig-27 Flogger		interdiction / strike
 ;* F3 Tornado		vs	Mig-31 Foxhound		air defence
 ;* F-15 Eagle		vs	Su-27 Flanker		interceptor / air superiority
@@ -19,10 +19,10 @@
 ;* E-3D Sentry		vs	Il-76 Mainstay		airborne early warning (AEW)
 ;*
 ;* Notes
-;* ÄÄÄÄÄ
+;* ÄÄÄÄ?
 ;*
 ;*    Data Format
-;*    ÄÄÄÄÄÄÄÄÄÄÄ
+;*    ÄÄÄÄÄÄÄÄÄÄ?
 ;*       Compound data structure for each drone:-
 ;*
 ;*	    MOBILE <>    	<- drone object data (VISDATA.INC)
@@ -67,7 +67,7 @@
 ;*			  useful for continuous routes.
 ;*
 ;*    Event Counter
-;*    ÄÄÄÄÄÄÄÄÄÄÄÄÄ
+;*    ÄÄÄÄÄÄÄÄÄÄÄÄ?
 ;*       The event counter is not implemented.
 ;*
 ;****************************************************************************
@@ -80,6 +80,8 @@
 		PUBLIC	TornadoOppPtr
 		PUBLIC	ResponseTimer
 		PUBLIC	EWRExposeTimer
+
+EXTRN	WPRngNMiles:WORD
 
 		EXTRN	UpdateMobile:FAR
 		EXTRN	ArcTan:FAR
@@ -6858,7 +6860,7 @@ AutoLaydown	PROC	NEAR
 		mov	dx,AC_WPBrg
 		call	CalcAngDiff
 
-		cmp	ax,14		;ñ10ø
+		cmp	ax,14		;?0?
 		_JA	ExitLaydown
 
 ;-------------------
@@ -6975,7 +6977,7 @@ AutoLGB		PROC	NEAR
 		mov	dx,AC_WPBrg
 		call	CalcAngDiff
 
-		cmp	ax,14		;ñ10ø
+		cmp	ax,14		;?0?
 		ja	ExitLGB
 
 ;-------------------
@@ -7087,7 +7089,7 @@ AutoJP233	PROC	NEAR
 		mov	dx,AC_WPBrg
 		call	CalcAngDiff
 
-		cmp	ax,14		;ñ10ø
+		cmp	ax,14		;?0?
 		_JA	ExitJP233
 
 ;-------------------
@@ -7236,7 +7238,7 @@ AutoAlarm	PROC	NEAR
 		mov	dx,AC_WPBrg
 		call	CalcAngDiff
 
-		cmp	ax,14		;ñ10ø
+		cmp	ax,14		;?0?
 		_JA	ExitAlarm
 
 ;-------------------
@@ -7407,7 +7409,7 @@ AutoAGM		PROC	NEAR
 		mov	dx,AC_WPBrg
 		call	CalcAngDiff
 
-		cmp	ax,14		;ñ10ø
+		cmp	ax,14		;?0?
 		_JA	ExitAGM
 
 ;-------------------

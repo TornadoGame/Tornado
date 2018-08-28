@@ -68,7 +68,8 @@
 		PUBLIC	Ch3Flags
 
 		EXTRN	LoadFile:FAR
-
+EXTRN	GameViewMode:WORD
+EXTRN   CockpitViews:BYTE
 		EXTRN	SoundCard:WORD
 		EXTRN	Rpm1:WORD
 		EXTRN	Rpm2:WORD
@@ -79,6 +80,7 @@
 		EXTRN	SoundOption:BYTE
 		EXTRN	DieFlag:BYTE
 		EXTRN	InCockpit:BYTE
+EXTRN	QuieterCockpit:BYTE
 		EXTRN	ShakePriority:BYTE
 		EXTRN	IRLockFlag:BYTE
 
@@ -318,13 +320,13 @@ SPKR_FX_RUMBLE	EQU	009h		;rumble
 
 ;* sound priorities (each effect must have a unique priority (identifer))
 
+SPKR_PR_LAUNCH	EQU	255		;missile launch
 SPKR_PR_ATTN	EQU	250		;attention getters
 SPKR_PR_RWR	EQU	240		;RWR alert
 SPKR_PR_CANNON	EQU	210		;cannon
 SPKR_PR_EXPLO1	EQU	200		;explosion 1
-SPKR_PR_EXPLO2	EQU	190		;explosion 2
-SPKR_PR_EXPLO3	EQU	180		;explosion 3
-SPKR_PR_LAUNCH	EQU	170		;missile launch
+SPKR_PR_EXPLO2	EQU	190		;explosion 2 - 190
+SPKR_PR_EXPLO3	EQU	180		;explosion 3 - 180
 SPKR_PR_SCREECH	EQU	150		;wheel screech
 SPKR_PR_DECOY	EQU	125		;chaff / flare
 SPKR_PR_MDOT	EQU	100		;Morse dot
@@ -452,14 +454,13 @@ ADLB_FX_GROWL	EQU	00bh		;lock on growl
 ADLB_FX_RUMBLE	EQU	009h		;rumble
 
 ;* sound priorities (each effect must have a unique priority (identifer))
-
+ADLB_PR_LAUNCH	EQU	255		;missile launch
 ADLB_PR_ATTN	EQU	250		;attention getters
 ADLB_PR_RWR	EQU	240		;RWR alert
 ADLB_PR_CANNON	EQU	210		;cannon
 ADLB_PR_EXPLO1	EQU	200		;explosion 1
 ADLB_PR_EXPLO2	EQU	190		;explosion 2
 ADLB_PR_EXPLO3	EQU	180		;explosion 3
-ADLB_PR_LAUNCH	EQU	170		;missile launch
 ADLB_PR_SCREECH	EQU	150		;wheel screech
 ADLB_PR_DECOY	EQU	125		;chaff / flare
 ADLB_PR_MDOT	EQU	100		;Morse dot
@@ -497,7 +498,8 @@ ADLB_TM_LAUNCH	EQU	40		;missile launch
 ADLB_TM_SCREECH	EQU	8		;wheel screech
 ADLB_TM_DECOY	EQU	5		;chaff / flare
 ADLB_TM_MDOT	EQU	5		;Morse dot
-ADLB_TM_MDASH	EQU	20		;Morse dash
+;ADLB_TM_MDASH	EQU	20		;Morse dash
+ADLB_TM_MDASH	EQU	-1		;Morse dash
 ADLB_TM_GEAR	EQU	75		;gear up / down
 ADLB_TM_GROWL	EQU	-1		;lock on growl
 ADLB_TM_RUMBLE	EQU	-1		;rumble
@@ -540,14 +542,13 @@ RLND_FX_GROWL	EQU	00bh		;lock on growl
 RLND_FX_RUMBLE	EQU	009h		;rumble
 
 ;* sound priorities (each effect must have a unique priority (identifer))
-
+RLND_PR_LAUNCH	EQU	255		;missile launch
 RLND_PR_ATTN	EQU	250		;attention getters
 RLND_PR_RWR	EQU	240		;RWR alert
 RLND_PR_CANNON	EQU	210		;cannon
 RLND_PR_EXPLO1	EQU	200		;explosion 1
 RLND_PR_EXPLO2	EQU	190		;explosion 2
 RLND_PR_EXPLO3	EQU	180		;explosion 3
-RLND_PR_LAUNCH	EQU	170		;missile launch
 RLND_PR_SCREECH	EQU	150		;wheel screech
 RLND_PR_DECOY	EQU	125		;chaff / flare
 RLND_PR_MDOT	EQU	100		;Morse dot
@@ -1429,7 +1430,7 @@ SkipRumbleSpkr:	cmp	SoundOption,SOUND_OPT_ENG	;engine sound option?
 		add	ah,48		;122 .. 48
 
 		mov	Tmp1,ah
-
+	
 ;* sort engine sound
 
 		test	EngSoundOn,1	;engine sound on?
@@ -1438,8 +1439,8 @@ SkipRumbleSpkr:	cmp	SoundOption,SOUND_OPT_ENG	;engine sound option?
 ;* start engine sound
 
 		mov	al,SPKR_FX_INT_ENG	;assume internal engine
-
-		test	InCockpit,1		;in cockpit?
+	
+		test	QuieterCockpit,1		;in cockpit?
 		jnz	@F			;yes ->
 
 		mov	al,SPKR_FX_EXT_ENG	;external engine
@@ -1544,7 +1545,7 @@ UpdateBlst	LABEL	NEAR
 @@:		mov	cl,9
 		shr	dx,cl		;0 .. 31
 		add	dl,8		;8 .. 39
-
+     
 ;* sort engine sound
 
 EngContBlst:	test	EngSoundOn,1	;engine sound on?
@@ -1560,7 +1561,7 @@ EngContBlst:	test	EngSoundOn,1	;engine sound on?
 
 @@:		mov	al,BLST_FX_INT_ENG	;assume internal engine
 
-		test	InCockpit,1		;in cockpit?
+		test	QuieterCockpit,1		;in cockpit?
 		jnz	@F			;yes ->
 
 		mov	al,BLST_FX_EXT_ENG	;external engine
@@ -1655,7 +1656,7 @@ UpdateAdLb	LABEL	NEAR
 
 		mov	al,ADLB_FX_INT_ENG	;assume internal engine
 
-		test	InCockpit,1		;in cockpit?
+		test	QuieterCockpit,1		;in cockpit?
 		jnz	@F			;yes ->
 
 		mov	al,ADLB_FX_EXT_ENG	;external engine
@@ -1680,7 +1681,7 @@ EngAdjustAdLb:	mov	al,Tmp1
 
 EngOffAdLb:	test	EngSoundOn,1	;engine sound already off?
 		jz	IntoUpdateAdLb	;yes ->
-
+zxcv:
 		CLRCH1	ADLB_FXOFF1
 
 		mov	EngSoundOn,0
@@ -1915,7 +1916,7 @@ SkipRumbleRlnd:	cmp	SoundOption,SOUND_OPT_ENG	;engine sound option?
 		add	al,dl		;8 .. 116
 
 		mov	Tmp2,al
-
+		
 ;* sort engine sound
 
 		test	EngSoundOn,1	;engine sound on?
@@ -1925,7 +1926,7 @@ SkipRumbleRlnd:	cmp	SoundOption,SOUND_OPT_ENG	;engine sound option?
 
 		mov	al,RLND_FX_INT_ENG	;assume internal engine
 
-		test	InCockpit,1		;in cockpit?
+		test	QuieterCockpit,1		;in cockpit?
 		jnz	@F			;yes ->
 
 		mov	al,RLND_FX_EXT_ENG	;external engine
@@ -2456,7 +2457,7 @@ MorseDotAdLb	LABEL	NEAR
 			ADLB_FX_MDOT,		\
 			ADLB_PR_MDOT,		\
 			ADLB_FL_MDOT,		\
-			ADLB_TM_MDOT
+			ADLB_TM_MDOT                                ;kbs
 
 @@:		ret
 
@@ -2670,7 +2671,8 @@ AttentionSpkr	LABEL	NEAR
 AttentionBlst	LABEL	NEAR
 AttentionAdLb	LABEL	NEAR
 ;---------------------------
-
+        test CockpitViews,0
+		jnz	@F
 		cmp	Ch2Priority,ADLB_PR_ATTN	;override?
 		ja	@F				;no ->
 

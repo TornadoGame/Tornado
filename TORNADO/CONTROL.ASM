@@ -89,10 +89,25 @@
 ;****************************************************************************
 
 		OPTION	M510		;<<<<< MASM v5.10 <<<<<
+EXTRN   NVG_set:BYTE		
+EXTRN   PlayTheme:BYTE
+EXTRN	KF_TrackingCam:BYTE
+EXTRN	HUDLevel:BYTE
+EXTRN	SetHUDLevel:FAR
+EXTRN	SetIRPalette:FAR
+EXTRN	FixIRPalette:FAR
+EXTRN	MusicCard:WORD		
+EXTRN InstallMusic:FAR
+EXTRN ResumeMusic:FAR
+EXTRN SuspendMusic:FAR
 
+		EXTRN	GradEnabled:BYTE
+		EXTRN	StarsEnabled:BYTE
+		EXTRN	CloudsEnabled:BYTE
+		EXTRN	HillTextEnabled:BYTE
+		
 		PUBLIC	Control
 		PUBLIC	CheckTimeout
-
 		EXTRN	QuickSetUp:FAR
 		EXTRN	DownLoad:FAR
 		EXTRN	InstallUser20:FAR
@@ -171,6 +186,9 @@
 		EXTRN	CountDown:WORD
 		EXTRN	PSP:WORD
 		EXTRN	SoundCard:WORD
+EXTRN HUDEnabled2:BYTE		
+		EXTRN	ShakeUp:BYTE
+		EXTRN	FullScreen:BYTE
 		EXTRN	MusicCard:WORD
 		EXTRN	StartAirspeed:WORD
 		EXTRN	WPPtr:WORD
@@ -220,7 +238,32 @@
 		EXTRN	TmpDieFlag:BYTE
 		EXTRN	NoFire:BYTE
 		EXTRN	CHStick:BYTE
-
+		
+EXTRN	RedWarnings2:WORD
+EXTRN	AmbWarnings2:WORD		
+		
+EXTRN SSF_AirBrakes:BYTE
+EXTRN SSF_ADC:BYTE
+EXTRN SSF_Engine1:BYTE
+EXTRN SSF_Engine2:BYTE
+EXTRN SSF_ECM:BYTE
+EXTRN SSF_Flaps:BYTE
+EXTRN SSF_Gear:BYTE
+EXTRN SSF_HUD:BYTE
+EXTRN SSF_NavigMFD:BYTE
+EXTRN SSF_Oxygen:BYTE
+EXTRN SSF_PilotMFD:BYTE
+EXTRN SSF_Radar:BYTE
+EXTRN SSF_RWR:BYTE
+EXTRN SSF_SPILS:BYTE
+EXTRN SSF_Sweep:BYTE
+EXTRN SSF_TAB1:BYTE
+EXTRN SSF_TAB2:BYTE
+EXTRN SSF_ThrustRvrs:BYTE
+EXTRN SSF_WheelBrakes:BYTE
+		
+		
+		
 		EXTRN	VGA:ABS
 		EXTRN	COM1:ABS
 		EXTRN	COM2:ABS
@@ -332,7 +375,7 @@ Control		PROC	NEAR
 ;* frame rates above 20 frames / second. Also the keyboard scan interrupt
 ;* is set to 20Hz and must be more frequent than the frame rate.
 
-@@:		mov	MaxFrameRate,6	;6/100th = 17 frames / second
+@@:		mov	MaxFrameRate,6	;6/100th = 17 frames / second (can go as low as 3/100)
 
 ;----------------------
 ;* command line options
@@ -375,7 +418,7 @@ Control		PROC	NEAR
 
 	IF	OPT_TITLE_PIC EQ 1
 
-		mov	dx,OFFSET TitlePic
+		mov	dx,OFFSET TitlePic                        
 		mov	cx,5*100
 		xor	al,al		;regular fades
 		call	LoadPicture
@@ -391,7 +434,7 @@ Control		PROC	NEAR
 
 	IF	OPT_LOGO_PIC EQ 1
 
-		mov	dx,OFFSET LogoPic
+		mov	dx,OFFSET LogoPic                          
 		mov	cx,5*100
 		xor	al,al		;regular fades
 		call	LoadPicture
@@ -636,24 +679,61 @@ ControlLoop	LABEL	NEAR
 	ENDIF
 
 	IF	OPT_DEBUG EQ 1
-
-		test	Key[K_F11],1
+	    ;Press Shift-Tab to show Infra-Red colors; release both keys; then press Shift-Tab to restore normal colors.
+		mov ah, Key[K_TAB]
+		and ah, Key[K_SHIFT]
+		_JZ @F
+		cmp	Night,0	;day?
+		je @F ;yes ->		
+		KBOUNCE Key[K_TAB] and KBOUNCE Key[K_SHIFT]  ;Frankie!
+		cmp NVG_set,1
+		je GoUnSetNVG
+		call	SetIRPalette
+		mov	GradEnabled,0;    ;Don't graduate the sky when in Night vision. Looks less cluttered. Looks better!
+		mov StarsEnabled,1
+		;mov CloudsEnabled,1
+		mov NVG_set,1
+		jmp SkipCredits2
+GoUnSetNVG:
+		call	FixIRPalette
+		mov	GradEnabled,1
+		;mov StarsEnabled,1
+		;mov CloudsEnabled,1
+		mov NVG_set,0
+		jmp SkipCredits2
+@@: 
+		test	Key[K_BACKSLASH],1
 		jz	@F
-		call	VisualInfo
+		;call	VisualInfo
+		jmp SkipCredits2
 @@:		
-	
+        mov	al,Key[K_CTRL]
+		and	al,Key[K_H]	;Control+H to toggle HUD on/off?
+		jz	@F
+		KBOUNCE Key[K_CTRL] and KBOUNCE Key[K_H]  ;Frankie!
+		xor	HUDEnabled2,1
+		jmp SkipCredits2
+@@:		
+		test	Key[K_H],1
+		jz	@F
+		KBOUNCE Key[K_H]  ;Frankie!
+   		mov	al,HUDLevel
+		inc	al
+		and	al,3
+		mov	HUDLevel,al
+		call	SetHUDLevel
+@@:		
+SkipCredits2:
 	ENDIF
 
 		call	DownLoad
-
 		call	SortPause
 
 	IF	OPT_PHOTO EQ 1
 
 		test	Key[K_F12],1
 		jz	@F
-		call	VGAPhotoDflt
-@@:		
+		call	VGAPhotoDfltcd
 
 	ENDIF
 
@@ -861,11 +941,28 @@ RxDataOk:	call	UpdatePanel
 
 	IF	OPT_DEBUG EQ 1
 
-		test	Key[K_F11],1
+		;test	Key[K_F11],1
+		;jz	@F
+		;KBOUNCE Key[K_F11]
+		;call	VisualInfo
+		;jmp SkipCredits3
+;@@:		
+		test	Key[K_H],1
 		jz	@F
-		call	VisualInfo
-@@:		
-	
+		KBOUNCE Key[K_H]  ;Frankie!
+		mov	al,HUDLevel
+		inc	al
+		and	al,3
+		mov	HUDLevel,al
+		call	SetHUDLevel
+		;jmp SkipCredits3
+@@:
+		;test	Key[K_F12],1
+		;jz	SkipCredits3		
+		;call	VisualInfo2
+
+SkipCredits3:
+		
 	ENDIF
 
 		call	DownLoad
@@ -936,7 +1033,14 @@ ArgLoop:	mov	si,ARGV[bx]
 
 ;* check for valid options
 
-@@:		cmp	ax,'AH'		;set heading (for start airborne)?
+@@:		cmp	ax,'AB' ;damage to airbrakes 
+        _JE SetAirBrakesDamaged ;yes ->
+		
+		
+		cmp	ax,'AD' ;damage to ? 
+        _JE SetADCDamaged ;yes ->		
+		
+        cmp	ax,'AH'		;set heading (for start airborne)?
 		_JE	SetHeading	;yes ->
 
 		cmp	ax,'AV'		;set airspeed (for start airborne)?
@@ -957,13 +1061,13 @@ ArgLoop:	mov	si,ARGV[bx]
 		cmp	ah,'B'		;Baud rate?
 		_JE	SetBaudRate	;yes ->
 
-		cmp	ax,"CH"		;CH FlightStick Pro?
+		cmp	ax,'CH'		;CH FlightStick Pro? ""
 		_JE	SetFlightStick	;yes ->
 
 		cmp	ah,'C'		;cockpit lighting?
 		_JE	SetLighting	;yes ->
-
-		cmp	ax,"DX"		;exchange data?
+		
+		cmp	ax,'DX'		;exchange data? ""
 		_JE	SetDataExchange	;yes ->
 
 		cmp	ax,'D1'		;drone cycling demo mode?
@@ -972,101 +1076,157 @@ ArgLoop:	mov	si,ARGV[bx]
 		cmp	ax,'D2'		;flying demo mode?
 		_JE	SetDemoMode2	;yes ->
 		
+		cmp	ax,'E1'		;Engine One is out!
+		_JE	SetEngine1Damaged	;yes ->
+		
+		cmp	ax,'E2'		;flying demo mode?
+		_JE	SetEngine2Damaged	;yes ->	
+		
+		cmp	ax,'EC'		;ECM damaged?
+		_JE	SetECMDamaged	;yes ->	
+				
 		cmp	ah,'E'		;explore mode?
 		_JE	SetExploreMode	;yes ->
 
-		cmp	ax,"FO"		;fade out loading screen?
+		cmp	ax,'FS'		;Allow full screen FLIR and TIALD?
+		_JE	FullScreenFLIRandTIALD	;yes ->				
+			
+		cmp	ax,'FL'		;flaps damaged?
+		_JE	SetFlapsDamaged	;yes ->		
+		
+		cmp	ax,'FO'		;fade out loading screen?
 		_JE	SetFadeOut	;yes ->
-
-		cmp	ax,"FR"		;set maximum frame rate?
+		
+		cmp	ax,'FR'		;set maximum frame rate?
 		_JE	SetFrameRate	;yes ->
 
 		cmp	ah,'F'		;fog?
-		_JE	SetFog		;yes ->
-
-		cmp	ax,"GT"		;global timeout?
+		_JE	SetFog		;yes ->				
+		
+		cmp	ax,'GR'		;gear damaged?
+		_JE	SetGearDamaged	;yes ->
+		
+		cmp	ax,'GT'		;global timeout?
 		_JE	SetTimeout	;yes ->
 
-		cmp	ax,"IF"		;infinite fuel?
+		cmp	ax,'HD'		;HUD?
+		_JE	SetHUDDamaged	;yes ->		
+		
+		cmp	ax,'IF'		;infinite fuel?
 		_JE	SetInfiniteFuel	;yes ->
 
-		cmp	ax,"IG"		;infinite g-force?
+		cmp	ax,'IG'		;infinite g-force?
 		_JE	SetInfiniteG	;yes ->
 
-		cmp	ax,"IW"		;infinite weapons?
+		cmp	ax,'IW'		;infinite weapons?
 		_JE	SetInfiniteWpns	;yes ->
 
-		cmp	ax,"MA"		;AdLib card?
+		cmp	ax,'MA'		;AdLib card?
 		_JE	SetAdLibMusic	;yes ->
 
-		cmp	ax,"MB"		;SoundBlaster card?
+		cmp	ax,'MB'		;SoundBlaster card?
 		_JE	SetBlasterMusic	;yes ->
 
-		cmp	ax,"MN"		;no sound card?
+		cmp	ax,'MN'		;no sound card?
 		_JE	SetNoMusic	;yes ->
 
-		cmp	ax,"MR"		;Roland LAPC1 card?
+		cmp	ax,'MR'		;Roland LAPC1 card?
 		_JE	SetRolandMusic	;yes ->
 
-		cmp	ax,"MS"		;internal speaker?
+		cmp	ax,'MS'		;internal speaker?
 		_JE	SetSpeakerMusic	;yes ->
 
-		cmp	ax,"MT"		;map test?
+		cmp	ax,'MT'		;map test?
 		_JE	SetMapTestMode	;yes ->
 
-		cmp	ax,"NC"		;no collisions?
+		cmp	ax,'NC'		;no collisions?
 		_JE	SetNoCollisions	;yes ->
 
+		cmp	ax,'NM'		;No Navigator's MFD
+		_JE	SetNavigMFDDamaged	;yes ->		
+		
 		cmp	ah,'N'		;night?
-		_JE	SetNight	;yes ->
-
+		_JE	SetNight	;yes ->		
+			
 		cmp	ah,'O'		;overcast?
-		_JE	SetOvercast	;yes ->
-
+		_JE	SetOvercast	;yes ->	
+	
 		cmp	ax,'PA'		;auto-run preview mode?
 		_JE	SetPreviewAuto	;yes ->
 
+		cmp	ax,'PM'		;Pilot's MFD Damaged.
+		_JE	SetPilotMFDdamaged	;yes ->		
+		
 		cmp	ah,'P'		;preview mode?
 		_JE	SetPreviewMode	;yes ->
 
 		cmp	ax,'QS'		;quick start?
 		_JE	SetQuickStart	;yes ->
 
-		cmp	ax,"RT"		;radar test enabled?
+		cmp	ax,'RD'		;radar damaged?
+		_JE	SetRadarDamaged	;yes ->		
+		
+		cmp	ax,'RT'		;radar test enabled?
 		_JE	SetRadarTest	;yes ->
 
-		cmp	ax,"SA"		;AdLib card?
+		cmp	ax,'RW'		;RWR gone?
+		_JE	SetRWRDamaged	;yes ->
+		
+		cmp	ax,'SA'		;AdLib card?
 		_JE	SetAdLib	;yes ->
 
-		cmp	ax,"SB"		;SoundBlaster card?
+		cmp	ax,'SB'		;SoundBlaster card?
 		_JE	SetSoundBlaster	;yes ->
 
-		cmp	ax,"SN"		;no sound card?
+		cmp	ax,'SH'		;Allow shake effects?
+		_JE	SetShake	;yes ->		
+
+		cmp	ax,'SN'		;no sound card?
 		_JE	SetNoSound	;yes ->
 
-		cmp	ax,"SR"		;Roland LAPC1 card?
+		cmp	ax,'SP'		;What is SP? damaged?
+		_JE	SetSPDamaged	;yes ->
+		
+		cmp	ax,'SR'		;Roland LAPC1 card?
 		_JE	SetRoland	;yes ->
 
-		cmp	ax,"SS"		;internal speaker?
+		cmp	ax,'SS'		;internal speaker?
 		_JE	SetSpeaker	;yes ->
 
-		cmp	ax,"T1"		;two player, com1?
+		cmp	ax,'SW'		;Sweep damaged?
+		_JE	SetSweepDamaged	;yes ->		
+		
+		cmp	ax,'T1'		;two player, com1?
 		_JE	SetCom1		;yes ->
-
-		cmp	ax,"T2"		;two player, com2?
+		
+		cmp	ax,'T2'		;two player, com2?
 		_JE	SetCom2		;yes ->
+		
+		cmp	ax,'TO'		    ;TV-Tab1 damaged?
+		_JE	SetTab1Damaged	;yes ->
 
-		cmp	ax,"TM"		;ThrustMaster?
+		cmp	ax,'TR'		    ;Thrust reversers?
+		_JE	SetThrustRevsDamaged	;yes ->		
+		
+		cmp	ax,'TT'		    ;TV-Tab2 damaged?
+		_JE	SetTab2Damaged	;yes ->
+		
+		cmp	ax,'TM'		;ThrustMaster?
 		_JE	SetThrustMaster	;yes ->
 
 		cmp	ah,'V'		;set variant?
 		_JE	SetVariant	;yes ->
 
-		cmp	ah,'W'		;set fixed weight?
-		_JE	SetWeight	;yes ->
+		cmp	ax,'WB'		;WheelBrake?
+		_JE	SetWBDamaged	;yes ->		
 
+		cmp	ah,'W'		;set fixed weight?
+		_JE	SetWeight	;yes ->		
+		
 		cmp	ax,'XW'		;set crosswinds?
 		_JE	SetXWinds	;yes ->
+;----------------			
+
 
 NextArg:	add	bx,2
 
@@ -1110,6 +1270,23 @@ SetMaxHdg:	mov	ax,360
 
 		jmp	HdgOk
 
+;---------------------------		
+SetAirBrakesDamaged LABEL NEAR		
+;---------------------------
+
+		mov	SSF_AirBrakes,1
+        or	AmbWarnings2,AMB_AB
+		jmp	NextArg
+
+;---------------------------
+SetADCDamaged LABEL NEAR				
+;---------------------------
+
+		mov	SSF_ADC,1
+		or	AmbWarnings2,AMB_ADC
+		jmp	NextArg
+
+		
 ;---------------------------
 SetAirspeed	LABEL	NEAR
 ;---------------------------
@@ -1338,6 +1515,33 @@ SetDemoMode2	LABEL	NEAR
 
 		jmp	NextArg
 
+;---------------------------		
+SetECMDamaged	LABEL	NEAR
+;---------------------------		
+
+		mov	SSF_ECM,1
+		or	AmbWarnings2,AMB_ECM
+		jmp	NextArg
+		
+;---------------------------		
+SetEngine1Damaged	LABEL	NEAR		
+;---------------------------
+
+		mov	SSF_Engine1,1
+		or	RedWarnings2,RED_L_ENG
+
+		jmp	NextArg
+
+
+;---------------------------		
+SetEngine2Damaged	LABEL	NEAR		
+;---------------------------
+
+		mov	SSF_Engine2,1
+        or	RedWarnings2,RED_R_ENG
+		
+		jmp	NextArg
+		
 ;---------------------------
 SetExploreMode	LABEL	NEAR
 ;---------------------------
@@ -1346,6 +1550,15 @@ SetExploreMode	LABEL	NEAR
 
 		jmp	NextArg
 
+;---------------------------		
+SetFlapsDamaged	LABEL	NEAR
+;---------------------------		
+		
+		mov	SSF_Flaps,1
+		or	AmbWarnings2,AMB_FLPS
+		
+		jmp	NextArg
+				
 ;---------------------------
 SetFadeOut	LABEL	NEAR
 ;---------------------------
@@ -1423,7 +1636,16 @@ SetFog		LABEL	NEAR
 		mov	Overcast,1	;always overcast if foggy
 
 		jmp	NextArg
+		
+;---------------------------
+SetGearDamaged		LABEL	NEAR
+;---------------------------
 
+		mov	SSF_Gear,1
+		or	RedWarnings2,RED_UC
+
+		jmp	NextArg
+		
 ;---------------------------
 SetTimeout	LABEL	NEAR
 ;---------------------------
@@ -1473,6 +1695,16 @@ SetTimeout	LABEL	NEAR
 
 		jmp	NextArg
 
+
+;---------------------------		
+SetHUDDamaged	LABEL	NEAR
+;---------------------------
+		
+		mov	SSF_HUD,1
+		or	AmbWarnings2,AMB_HUD
+
+		jmp	NextArg
+				
 ;---------------------------
 SetInfiniteFuel	LABEL	NEAR
 ;---------------------------
@@ -1553,6 +1785,17 @@ SetNoCollisions	LABEL	NEAR
 
 		jmp	NextArg
 
+		
+;---------------------------		
+SetNavigMFDDamaged	LABEL	NEAR
+;---------------------------		
+		
+		mov	SSF_NavigMFD,1
+		or	AmbWarnings2,AMB_MFD2
+		
+		jmp	NextArg
+		
+		
 ;---------------------------
 SetNight	LABEL	NEAR
 ;---------------------------
@@ -1582,6 +1825,7 @@ SetNight	LABEL	NEAR
 
 		jmp	NextArg
 
+		
 ;---------------------------
 SetOvercast	LABEL	NEAR
 ;---------------------------
@@ -1598,6 +1842,14 @@ SetPreviewAuto	LABEL	NEAR
 
 		jmp	NextArg
 
+;---------------------------
+SetPilotMFDdamaged	LABEL	NEAR
+;---------------------------
+
+		mov	SSF_PilotMFD,1
+
+		jmp	NextArg		
+		
 ;---------------------------
 SetPreviewMode	LABEL	NEAR
 ;---------------------------
@@ -1621,7 +1873,7 @@ SetQuickStart	LABEL	NEAR
 
 		mov	InfiniteFuel,1
 
-		mov	InfiniteGForce,1
+		mov	InfiniteGForce,0
 
 		mov	InfiniteWeapons,1
 
@@ -1633,6 +1885,14 @@ SetQuickStart	LABEL	NEAR
 
 		jmp	NextArg
 
+;---------------------------		
+SetRadarDamaged	LABEL	NEAR
+;---------------------------		
+		
+		mov	SSF_Radar,1
+		or	AmbWarnings2,AMB_RAD		
+		jmp	NextArg
+		
 ;---------------------------
 SetRadarTest	LABEL	NEAR
 ;---------------------------
@@ -1641,6 +1901,13 @@ SetRadarTest	LABEL	NEAR
 
 		jmp	NextArg
 
+;---------------------------		
+SetRWRDamaged	LABEL	NEAR
+;---------------------------
+		mov	SSF_RWR,1
+		or	AmbWarnings2,AMB_RWR
+		jmp	NextArg
+		
 ;---------------------------
 SetAdLib	LABEL	NEAR
 ;---------------------------
@@ -1656,7 +1923,24 @@ SetSoundBlaster	LABEL	NEAR
 		mov	SoundCard,SND_SBLASTER
 
 		jmp	NextArg
+				
 
+;---------------------------
+FullScreenFLIRandTIALD	LABEL	NEAR
+;---------------------------
+
+		mov	FullScreen,1
+
+		jmp	NextArg
+
+;---------------------------		
+SetShake    LABEL    NEAR	
+;---------------------------
+
+        mov	ShakeUp,SHAKE_OPT_ON
+
+		jmp	NextArg
+	
 ;---------------------------
 SetNoSound	LABEL	NEAR
 ;---------------------------
@@ -1665,6 +1949,13 @@ SetNoSound	LABEL	NEAR
 
 		jmp	NextArg
 
+;---------------------------
+SetSPDamaged	LABEL	NEAR
+;---------------------------	
+		mov	SSF_SPILS,1
+		or	RedWarnings2,RED_SPILS	
+		jmp	NextArg
+		
 ;---------------------------
 SetRoland	LABEL	NEAR
 ;---------------------------
@@ -1682,6 +1973,13 @@ SetSpeaker	LABEL	NEAR
 		jmp	NextArg
 
 ;---------------------------
+SetSweepDamaged	LABEL	NEAR
+;---------------------------
+		mov	SSF_Sweep,1
+		or	AmbWarnings2,AMB_SWP
+		jmp	NextArg		
+		
+;---------------------------
 SetCom1		LABEL	NEAR
 ;---------------------------
 
@@ -1691,6 +1989,30 @@ SetCom1		LABEL	NEAR
 
 		jmp	NextArg
 
+;---------------------------
+SetTab1Damaged		LABEL	NEAR
+;---------------------------
+
+		mov	SSF_TAB1,1
+        or	AmbWarnings2,AMB_L_TAB
+		jmp	NextArg
+
+;---------------------------		
+SetThrustRevsDamaged		LABEL	NEAR
+;---------------------------		
+		
+		mov	SSF_ThrustRvrs,1
+		or	RedWarnings2,RED_REV
+		jmp	NextArg
+;---------------------------
+SetTab2Damaged		LABEL	NEAR
+;---------------------------
+
+		mov	SSF_TAB2,1
+		or	AmbWarnings2,AMB_R_TAB
+		jmp	NextArg
+
+		
 ;---------------------------
 SetCom2		LABEL	NEAR
 ;---------------------------
@@ -1709,6 +2031,16 @@ SetThrustMaster	LABEL	NEAR
 
 		jmp	NextArg
 
+
+;---------------------------		
+SetWBDamaged	LABEL	NEAR
+;---------------------------
+		mov	SSF_WheelBrakes,1
+		or	AmbWarnings2,AMB_WB		
+		;mov	SSF_Oxygen,1
+		;or	RedWarnings2,RED_OXY
+		jmp	NextArg		
+		
 ;---------------------------
 SetVariant	LABEL	NEAR
 ;---------------------------
@@ -1808,8 +2140,8 @@ SetMaxWeight:	mov	ax,60000
 
 SetMinWeight:	mov	ax,33000
 
-		jmp	WeightOk
-
+		jmp	WeightOk		
+		
 ;---------------------------
 SetXWinds	LABEL	NEAR
 ;---------------------------
@@ -1862,7 +2194,7 @@ SortPause	PROC	NEAR
 
 		KTEST	KF_Pause	;key pressed?
 		_JZ	ExitPause	;no ->
-
+        
 		mov	Paused,1
 
 		call	SuspendSound
@@ -1914,7 +2246,10 @@ PauseLoop:	mov	ax,Frames
 SkipQuit: 	KTEST	KF_Pause
 		jz	PauseLoop
 
-PauseDone: 	call	FadeUp
+PauseDone: 	
+
+        ;call VisualInfo
+            call	FadeUp
 
 ;* restore timers / counters
 
@@ -1930,7 +2265,7 @@ PauseDone: 	call	FadeUp
 		call	ResumeMusic
 
 		mov	Paused,0
-
+        
 ExitPause:	ret
 
 SortPause	ENDP
@@ -1952,7 +2287,7 @@ InitDemo	PROC	NEAR
 InitCyclingDemo	LABEL	NEAR		;init drone cycling demo mode
 ;---------------------------
 
-		mov	DisableInput,DIP_DEMO
+		;mov	DisableInput,DIP_DEMO
 
 		mov	InfiniteFuel,1
 
@@ -1971,7 +2306,7 @@ InitFlyingDemo	LABEL	NEAR		;init flying demo mode
 ;* note: Assume that the waypoint route is "continuous" (see MAINDATA.ASM),
 ;*       and that there are at least 3 waypoints.
 
-		mov	DisableInput,DIP_DEMO
+		;mov	DisableInput,DIP_DEMO
 
 		mov	StartAirborne,1
 

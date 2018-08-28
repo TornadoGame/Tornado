@@ -10,13 +10,35 @@
 
 		OPTION	M510		;<<<<< MASM v5.10 <<<<<
 
+		PUBLIC UpdateCtrlSFace
 		PUBLIC	UpdatePilot
-
+PUBLIC NVG_set
+PUBLIC FromHomeToPgUp
+PUBLIC UpdateRWR
+PUBLIC UpdateRWR2
+PUBLIC UpdateEScope
+PUBLIC UpdateEScope2
 		PUBLIC	OxyDollyPos
 		PUBLIC	DialXY1
 		PUBLIC	DialXY2
 		PUBLIC	DialXY3
+;EXTRN   NVG_set:BYTE
+EXTRN TrueRadAlt:WORD
+EXTRN	CrewMode:WORD
+EXTRN	M_CosR:WORD
+EXTRN	M_CosP:WORD
+EXTRN	TAB1:WORD
+EXTRN	TAB2:WORD
+EXTRN	ShakeUp:BYTE
+;EXTRN   KF_NVG_MFD:BYTE
+;EXTRN   KF_NONVG_MFD:BYTE
 
+EXTRN	IronWork:BYTE
+EXTRN	LoadFramePan:NEAR    ;hacked on 4/11/2017
+;EXTRN	LoadExtrnPan:NEAR    ;hacked on 4/11/2017
+EXTRN   LoadPilotPan:NEAR
+EXTRN	UpdateExtrn:NEAR     ;hacked on 4/11/2017
+EXTRN	DrawBrackets:FAR
 		EXTRN	ClearPilotPanel:FAR
 		EXTRN	DrawPilotPanel:FAR
 		EXTRN	SetViewMode:FAR
@@ -30,7 +52,12 @@
 		EXTRN	Print$:FAR
 		EXTRN	PrintChar:FAR
 
+		EXTRN	SetIRPalette:FAR
+		EXTRN	FixIRPalette:FAR
+EXTRN	RandX:FAR
+		
 		EXTRN	UpdateHUD:NEAR
+		EXTRN	UpdateHUD2:NEAR
 		EXTRN	UpdatePilotMFD:NEAR
 
 		EXTRN	M_VIEW:WORD
@@ -78,6 +105,29 @@
 		EXTRN	SSF_Oxygen:BYTE
 		EXTRN	SSF_RWR:BYTE
 		EXTRN	Night:BYTE
+		
+		EXTRN	GradEnabled:BYTE
+		EXTRN	StarsEnabled:BYTE
+		EXTRN	CloudsEnabled:BYTE
+		EXTRN	HillTextEnabled:BYTE
+;============================================================================
+EXTRN	ShakePriority:BYTE
+EXTRN	HShake:BYTE	
+EXTRN	VShake:BYTE
+EXTRN	ShakeTimer:WORD
+EXTRN	HSHAKE_HI:ABS
+EXTRN	VSHAKE_HI:ABS
+EXTRN	HSHAKE_LO:ABS
+EXTRN	HSHAKE_VERY_LO:ABS
+EXTRN	VSHAKE_VERY_LO:ABS
+EXTRN	VSHAKE_LO:ABS
+EXTRN	VSHAKE_OFF:ABS
+EXTRN	HSHAKE_OFF:ABS
+
+
+;============================================================================
+INCLUDE	TAB.INC
+INCLUDE	MISCMAC.INC
 
 ;============================================================================
 
@@ -88,17 +138,18 @@
 
 		INCLUDE	\LIB8086\PRINT.INC
 		INCLUDE	\LIB8086\USEFUL.INC
+		INCLUDE	\LIB8086\KEYS.INC
 
 ;============================================================================
 
 DATA		SEGMENT PARA PUBLIC 'DATA'
-
+FromHomeToPgUp DB 0
 TempVal		DW	0
-
+NVG_set	    DB	0		;0 .. 1
 ;------------------------------------
 ;* HSI localiser and glide slope vars
 ;------------------------------------
-
+MIN_OP_RAD_ALT	EQU	100
 LOCAL_X		EQU	95		;localiser needle origin
 LOCAL_Y		EQU	184
 
@@ -460,6 +511,7 @@ STACK		SEGMENT PARA PUBLIC 'STACK'
 
 RWR_CIRCLE_X 	EQU	236
 RWR_CIRCLE_Y 	EQU	121
+RWR_CIRCLE_Y2 	EQU	80 ;Added by Frankie on 15/8/2018
 
 ;* circle co-ords
 
@@ -545,48 +597,60 @@ PANCODE		SEGMENT BYTE PUBLIC 'CODE'
 ;* ret : nothing
 ;* kill: assume all
 
-UpdatePilot	PROC	NEAR
-
-		call	UpdateHUD
-
-		call	InitPanel
-
+UpdatePilot	PROC	NEAR 
+        ;mov	IronWork,1
+;call CheckForUNNVG
+;call CheckForNVG		
+		call	UpdateHUD		
+		call	InitPanel		
+call    LoadPilotPan
 		call	UpdateEngRPM
-
 		call	UpdateEngTemp
-
 		call	UpdateFuel
-
 		call	UpdateADI
-
 		call	UpdateHSI
-
 		call	UpdateGMeter
-
 		call	UpdateCompass
-
 		call	UpdateCtrlSFace
-
 		call	UpdateAltimeter
-
 		call	UpdateVSI
-
 		call	UpdateSpeed
-
 		call	UpdateRadAlt
-
 		call	UpdateEScope
-
-		call	UpdatePilotMFD
-
 		call	UpdateOxyDolly
-
 		call	DrawPilotPanel
-
 		call	DrawADIRollBug
-
-		call	UpdateRWR
-
+		call	UpdateRWR		
+		call	UpdatePilotMFD	
+        
+		cmp	ShakeUp,1
+		_JNE NoShakes
+		
+		call	RandX		; 0.00 ..  2.55 secs
+		cmp	ax,(2*256)/100	;2% chance of random shake in cockpit
+		ja	SkipShakeCockpit0
+		
+		call	RandX	
+		cmp	ax,(30*256)/100	
+		jb SkipShakeCockpit1
+		SHAKE	SHAKE_LAND_GOOD,HSHAKE_OFF,VSHAKE_OFF,5
+		ret
+SkipShakeCockpit1:		
+		cmp	ax,(50*256)/100	
+		jb SkipShakeCockpit2
+		SHAKE	SHAKE_LAND_GOOD,HSHAKE_LO,VSHAKE_LO,5
+		ret		
+SkipShakeCockpit2:
+		cmp	ax,(75*256)/100	
+		jb SkipShakeCockpit3
+        SHAKE	SHAKE_LAND_GOOD,HSHAKE_OFF,VSHAKE_LO,5
+		ret
+SkipShakeCockpit3:		
+        SHAKE	SHAKE_LAND_GOOD,HSHAKE_LO,VSHAKE_OFF,5
+		ret
+SkipShakeCockpit0:
+        SHAKE	SHAKE_NOSE_DOWN,HSHAKE_OFF,VSHAKE_OFF,5
+NoShakes:		
 		ret
 
 UpdatePilot	ENDP
@@ -1269,10 +1333,155 @@ UpdateCompass	ENDP
 
 UpdateCtrlSFace	PROC	NEAR
 
+cmp	CrewMode,CREW_PILOT	;pilot?
+je	StandardLocation			;yes, pilot ->
+
 ;--------------------------
 ;* flaps position indicator
 ;--------------------------
+mov	si,OFFSET TAB1	;this TAB display
+mov	di,OFFSET TAB2	;other TAB display
+cmp	TAB1.TAB_MODE,TAB_FLIR_ORI
+je CustomLocationFlapsSlats
+cmp	TAB1.TAB_MODE,TAB_TIALD_ORI
+je CheckPitchLimitOrTabDamaged
+cmp	TAB2.TAB_MODE,TAB_FLIR_ORI
+je CustomLocationFlapsSlats
+cmp	TAB2.TAB_MODE,TAB_TIALD_ORI
+je CheckPitchLimitOrTabDamaged
 
+cmp	CrewMode,CREW_NAVIG
+jne StandardLocation
+ret
+
+CheckPitchLimitOrTabDamaged:
+        cmp	TrueRadAlt,MIN_OP_RAD_ALT	;minimum alt for TIALD not ok?
+		jl RausOut ;no ->
+		cmp	M_CosP,16384	;pitch in limits (+/-60degs)?
+		jl	RausOut ;no ->
+		cmp	M_CosR,16384	;roll in limits (+/-60degs)?
+		jl	RausOut ;no ->
+		mov	bx,TAB_SSF_PTR[si]
+		test	BYTE PTR [bx],1
+		_JNZ	RausOut
+		mov	bx,TAB_SSF_PTR[di]
+		test	BYTE PTR [bx],1		;other TAB display damaged?
+		jnz	RausOut
+		jmp CustomLocationFlapsSlats
+RausOut: ret
+CustomLocationFlapsSlats:
+XCENTRE		=	11-5
+YCENTRE		=	170-15
+
+;* index = CrntFlapVal * (382 / 32768) = 0 .. 7
+
+		mov	ax,CrntFlapVal
+		mov	dx,382
+		
+		imul	dx
+		FRACADJ	si
+		shl	si,1		;*2 index
+
+		mov	cx,XCENTRE
+		mov	bl,YCENTRE
+
+		mov	dx,cx
+		mov	al,FlapsXY[si+0]	;x offset
+		cbw
+		add	dx,ax
+
+		mov	bh,bl
+		add	bh,FlapsXY[si+1]	;y offset
+
+		mov	al,COL_NEEDLE
+
+		call	LineDraw
+
+;--------------------------
+;* slats position indicator
+;--------------------------
+
+XCENTRE		=	22-5
+YCENTRE		=	170-15
+
+;* index = CrntFlapPos = 0 .. 3
+
+		mov	al,CrntFlapPos
+		xor	ah,ah
+		mov	si,ax
+		shl	si,1		;*2 index
+
+		mov	cx,XCENTRE
+		mov	bl,YCENTRE
+
+		mov	dx,cx
+		mov	al,SlatsXY[si+0]	;x offset
+		cbw
+		add	dx,ax
+
+		mov	bh,bl
+		add	bh,SlatsXY[si+1]	;y offset
+
+		mov	al,COL_NEEDLE
+
+		call	LineDraw
+
+;--------------------------
+;* wings position indicator
+;--------------------------
+
+XCENTRE		=	26-5
+YCENTRE		=	178-15
+
+;* index = CrntWingVal * (5d15 / 32768)
+
+		mov	ax,CrntWingVal
+		mov	dx,515
+		imul	dx
+		FRACADJ	si
+		shl	si,1		;*2 index
+
+		mov	cx,XCENTRE
+		mov	bl,YCENTRE
+
+		mov	dx,cx
+		mov	al,WingsXY[si+0]	;x offset
+		cbw
+		add	dx,ax
+
+		mov	bh,bl
+		add	bh,WingsXY[si+1]	;y offset
+
+		mov	al,COL_NEEDLE
+
+		call	LineDraw
+
+;---------------------
+;* airbrakes indicator
+;---------------------
+
+XCENTRE		=	11-5
+YCENTRE		=	180-15
+
+		mov	cx,XCENTRE
+		mov	bl,YCENTRE
+
+		mov	dx,XCENTRE-3	;assume airbrakes in
+		mov	bh,YCENTRE+4
+
+		test	AirBrakes,1	;airbrakes in?
+		jz	@F		;yes ->
+
+		mov	dx,XCENTRE-5	;airbrakes out
+		mov	bh,YCENTRE+2
+
+@@:		mov	al,COL_NEEDLE
+
+		call	LineDraw
+
+		ret
+
+StandardLocation:
 XCENTRE		=	11
 YCENTRE		=	170
 
@@ -1335,7 +1544,7 @@ YCENTRE		=	170
 XCENTRE		=	26
 YCENTRE		=	178
 
-;* index = CrntWingVal * (515 / 32768)
+;* index = CrntWingVal * (5d15 / 32768)
 
 		mov	ax,CrntWingVal
 		mov	dx,515
@@ -1797,6 +2006,127 @@ ExitEScope:	ret
 
 UpdateEScope 	ENDP
 
+
+;----------------------------------------------------------------------------------
+; This duplicate EScope is used by the MFD and TV-TAb full-screen FLIR
+
+UpdateEScope2	PROC	NEAR
+
+ESCOPE_X_2	EQU	283 ;0, 72
+ESCOPE_Y_2	EQU	172
+ESCOPE_WIDTH_2	EQU	32
+ESCOPE_DEPTH_2	EQU	20
+ESCOPE_DATUM_2	EQU	6
+
+;* check IDS / ECR
+
+		cmp	TornadoType,ADV_TORNADO
+		_JE	ExitEScope2
+
+;* clear display
+
+		mov	cx,ESCOPE_X_2
+		mov	bl,ESCOPE_Y_2
+		mov	dx,ESCOPE_X_2+ESCOPE_WIDTH_2-1
+		mov	bh,ESCOPE_Y_2+ESCOPE_DEPTH_2-1
+
+		mov	al,COL_CRT1
+		call	BlockFill
+
+;* check alt < 5,000ft
+
+		cmp	ZftHi,0		;alt < 65,535ft?
+		ja	@F		;no ->
+		cmp	ZftLo,5000	;alt < 5,000ft?
+		jb	AltOk2		;yes ->
+
+@@:		jmp	EtchDatum2
+
+AltOk2:	     	xor	bx,bx		;index
+		mov	cx,32		;number of ground height samples
+
+GndHtLoop2:	push	bx
+		push	cx
+
+;* draw ground height trace
+
+;* x pos = -cx (32 .. 1) + ESCOPE_X + ESCOPE_WIDTH
+
+		neg	cx
+
+		add	cx,ESCOPE_X_2+ESCOPE_WIDTH_2
+
+;* y pos = (alt - ground height) / 64 + ESCOPE_Y + ESCOPE_DATUM + 1
+
+		mov	ax,ZftLo
+		sub	ax,GndHtData[bx]
+		ABSV	ax
+		REPT	6   		;/64
+		shr	ax,1
+		ENDM
+		adc	ax,0		;1/2 bit round up
+		xor	ax,dx		;restore sign
+		sub	ax,dx
+
+		add	ax,ESCOPE_Y_2+ESCOPE_DATUM_2+1
+
+		cmp	ax,ESCOPE_Y_2	;trace above display?
+		jge	@F		;no ->
+
+		mov	bl,ESCOPE_Y_2-1	;set y for full noise
+		jmp	DrawNoise2
+
+@@:		cmp	ax,ESCOPE_Y_2+ESCOPE_DEPTH_2-1	;trace below display?
+		jg	SkipTrace2			;yes ->
+
+		mov	bl,al
+
+		push	bx
+		push	cx
+
+		mov	al,COL_CRT16
+		call	SetPixel
+
+		pop	cx
+		pop	bx
+
+;* draw noise under trace (if any)
+
+DrawNoise2:	mov	bh,ESCOPE_Y_2+ESCOPE_DEPTH_2-1
+
+		cmp	bl,bh		;any noise?
+		je	SkipTrace2	;no ->
+
+		inc	bl		;y = y + 1
+
+		mov	al,COL_CRT6
+		call	VLineDraw
+
+SkipTrace2: 	pop	cx
+		pop	bx
+
+		add	bx,2		;next index
+
+		loop	GndHtLoop2
+
+;* etch aircraft datum
+
+EtchDatum2:	mov	al,COL_CRT16
+		mov	cx,ESCOPE_X_2
+		mov	bl,ESCOPE_Y_2+ESCOPE_DATUM_2
+		call	SetPixel
+
+		mov	al,COL_CRT16
+		mov	cx,ESCOPE_X_2+1
+		mov	bl,ESCOPE_Y_2+ESCOPE_DATUM_2
+		call	SetPixel
+
+ExitEScope2:	ret
+
+UpdateEScope2 	ENDP
+
+
+
 ;----------------------------------------------------------------------------
 
 ;* UpdateOxyDolly - update oxygen flow indicator
@@ -1965,6 +2295,121 @@ RWRExit:	ret
 
 UpdateRWR	ENDP
 
+
+;----------------------------------------------------------------------------
+;* UpdateRWR2 - update radar warning receiver 
+;* (adapted UpdateRWR procedure for split-screen top-half screen's FLIR view)
+;*  By Frankie Kam on 15/8/2018
+;* pass: nothing
+;* ret : nothing
+;* kill: assume all
+;*
+;* note: This routine must be called AFTER DrawPilotPanel else the threat
+;*	 symbols are overwritten.
+
+UpdateRWR2	PROC	NEAR
+
+;----------------------
+;* check if RWR damaged
+;----------------------
+
+		test	SSF_RWR,1
+		jnz	RWRExit2
+
+;-----------------------------------
+;* draw low priority threat symobols
+;-----------------------------------
+
+		mov	cx,NumRWRThreats
+		jcxz	RWRExit2
+
+		mov	bp,OFFSET RWRThreats
+
+RWRLoop12:	mov	si,[bp].RWR_THREAT
+
+		cmp	RWRLoSymbol[si],-1
+		je	@F
+
+		push	cx
+		push	bp
+		
+		mov	bp,[bp].RWR_DIR
+
+		REPT	3
+		shr	bp,1		;0 .. 63
+		ENDM
+
+		ROUNDUP	bp		;0 .. 64
+
+		shl	bp,1		;0 .. 128 step 2
+
+		mov	cx,RWR_CIRCLE_X
+		mov	bl,RWR_CIRCLE_Y2
+
+		mov	al,RWRCircle[bp+0]	;x offset
+		cbw
+		add	cx,ax
+
+		add	bl,RWRCircle[bp+1]	;y offset
+
+		call	RWRLoSymbol[si]
+
+		pop	bp
+		pop	cx
+
+@@:		add	bp,RWR_REC_SIZE
+
+		loop	RWRLoop12
+
+;------------------------------------
+;* draw high priority threat symobols
+;------------------------------------
+
+		mov	cx,NumRWRThreats
+
+		mov	bp,OFFSET RWRThreats
+
+RWRLoop22:	mov	si,[bp].RWR_THREAT
+
+		cmp	RWRHiSymbol[si],-1
+		je	@F
+
+		push	cx
+		push	bp
+		
+		mov	bp,[bp].RWR_DIR
+
+		REPT	3
+		shr	bp,1		;0 .. 63
+		ENDM
+
+		ROUNDUP	bp		;0 .. 64
+
+		shl	bp,1		;0 .. 128 step 2
+
+		mov	cx,RWR_CIRCLE_X
+		mov	bl,RWR_CIRCLE_Y2
+
+		mov	al,RWRCircle[bp+0]	;x offset
+		cbw
+		add	cx,ax
+
+		add	bl,RWRCircle[bp+1]	;y offset
+
+		call	RWRHiSymbol[si]
+
+		pop	bp
+		pop	cx
+
+@@:		add	bp,RWR_REC_SIZE
+
+		loop	RWRLoop22
+
+RWRExit2:	ret
+
+UpdateRWR2	ENDP
+
+
 ;----------------------------------------------------------------------------
 
 ;* SAMSymbol - draw RWR SAM symbol
@@ -2092,6 +2537,30 @@ MSLSymbol2	PROC	NEAR
 		ret
 
 MSLSymbol2	ENDP
+
+;CheckForNVG	PROC	NEAR
+;        KTEST   KF_NVG_MFD
+;        _JZ GoHere2
+;		cmp	Night,0	;day?
+;		je GoHere2 ;yes ->		
+;		call	SetIRPalette
+;		mov	GradEnabled,1
+;		mov StarsEnabled,0
+;		mov CloudsEnabled,0
+;		mov NVG_set,1
+;   GoHere2: ret
+;CheckForNVG ENDP
+
+;CheckForUNNVG	PROC	NEAR
+;        KTEST   KF_NONVG_MFD
+;        _JZ GoHere1
+;		call	FixIRPalette
+;		mov	GradEnabled,1
+;		mov StarsEnabled,1
+;		mov CloudsEnabled,1
+;		mov NVG_set,0
+;   GoHere1: ret
+;CheckForUNNVG ENDP
 
 PANCODE		ENDS
 

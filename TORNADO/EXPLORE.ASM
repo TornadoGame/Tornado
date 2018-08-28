@@ -36,7 +36,7 @@
 		PUBLIC	X_ElePosn
 		PUBLIC	X_AilPosn
 		PUBLIC	X_ThrotPosn
-
+		EXTRN	InstallUser100:FAR
 		EXTRN	InstallUser100:FAR
 		EXTRN	CalcDeltaTime:FAR
 		EXTRN	UpdateMovingMap:FAR
@@ -96,6 +96,15 @@
 		EXTRN	KF_Clouds:BYTE
 		EXTRN	KF_Horizon:BYTE
 		EXTRN	KF_Minimise:BYTE
+EXTRN	KF_GndText:BYTE		
+EXTRN	GradEnabled:BYTE
+EXTRN	StarsEnabled:BYTE
+EXTRN	CloudsEnabled:BYTE
+EXTRN	HillTextEnabled:BYTE		
+EXTRN   NVG_set:BYTE
+EXTRN	SetIRPalette:FAR
+EXTRN	FixIRPalette:FAR
+EXTRN	Night:BYTE
 		EXTRN	KF_Recal:BYTE
 		EXTRN	KF_JoySensNorm:BYTE
 		EXTRN	KF_JoySensHigh:BYTE
@@ -107,7 +116,8 @@
 		EXTRN	MAP_ZOOM1:ABS
 		EXTRN	MAP_ZOOM6:ABS
 		EXTRN	MAP_ORG_CENTRE:ABS
-
+EXTRN   HorizonValue4:WORD	
+EXTRN YawValue3:WORD	
 ;============================================================================
 
 		INCLUDE	MAINDATA.INC
@@ -130,7 +140,7 @@ DATA		SEGMENT PARA PUBLIC 'DATA'
 ;* large scale map data
 ;----------------------
 
-EXP_VIEW	VIEWPOINT <16,16,0,0,Z_MIN>	;map viewpoint
+EXP_VIEW	VIEWPOINT <16,16,0,0,1000> ;Z_MIN>	;map viewpoint
 
 ExpMapZoom 	DW	MAP_ZOOM1	;map zoom level
 
@@ -188,11 +198,12 @@ CTRL_DEV_JS1	EQU	2		;single joystick
 CTRL_DEV_JS2	EQU	4		;dual joysticks
 CTRL_DEV_MOUSE	EQU	6		;mouse
 
-X_CtrlDevice	DW	CTRL_DEV_MOUSE
+X_CtrlDevice	DW	CTRL_DEV_KBD ;CTRL_DEV_MOUSE
 
 ;* positional data
 
 Z_MIN		EQU	16
+Z_INIT      EQU 1000
 Z_MAX		EQU	10000
 
 X_XFine		DW	0
@@ -279,13 +290,14 @@ VisRange	DB	6, 9, 12, 16, 19, 22, 25
 
 		EVEN
 
+
 ;* control device strings (ptr = OFFSET CtrlDev$ + X_CtrlDevice * 6)
 
 CtrlDevPtr	DW	OFFSET CtrlDev$
 
 CtrlDev$	LABEL	BYTE
 
-		DB	"KEYBOARD   ",0
+		DB	"KEYS:10ZX+-",0;DB	"1 0 Z X + - Arrows",0
 		DB	"1 JOYSTICK ",0
 		DB	"2 JOYSTICKS",0
 		DB	"MOUSE      ",0
@@ -336,7 +348,6 @@ Info$		LABEL	BYTE
 		P_END
 
 		EVEN
-
 ;-------------
 ;* 50Hz toggle
 ;-------------
@@ -1009,10 +1020,10 @@ FlyLoop:	call	UpdateKeys
 
 	IF	OPT_DEBUG EQ 1
 
-		test	Key[K_F11],1
-		jz	@F
-		call	VisualInfo
-@@:	
+		;test	Key[K_F11],1
+		;jz	@F
+		;call	VisualInfo
+;@@:	
 	
 	ENDIF
 
@@ -1104,7 +1115,7 @@ InitExpModel	PROC	NEAR
 		mov	si,OFFSET EXP_VIEW
 		call	CalcGndHeight
 
-		add	ax,Z_MIN
+		add	ax,Z_INIT
 
 		cmp	ax,WORD PTR EXP_VIEW.VP_ZFT_LO	;z min < z?
 		jbe	@F				;yes ->
@@ -1271,6 +1282,26 @@ ExploreModel	PROC	NEAR
 		rcl	dx,1
 		ENDM
 
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+		KTEST KF_Minimise  ;UpdateTracking
+		jz SkipAlexx1
+		sub HorizonValue4, 2
+		;add TrkCamAlt,2
+		KBOUNCE KF_Minimise
+		jmp SkipAlexx2
+SkipAlexx1:
+		KTEST KF_Range 
+		jz SkipAlexx2
+		add HorizonValue4, 2
+		;sub TrkCamAlt,2
+		KBOUNCE KF_Range
+SkipAlexx2:
+        mov bx, HorizonValue4
+		mov	EXP_VIEW.VP_PITCH, bx 
+
+
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+		
 ;* update x position (with sector change test)
 		
 		add	X_XFine,ax
@@ -1890,14 +1921,63 @@ ExploreIntr100	PROC	FAR
 ;*
 ;* stop dead ............ num keypad '5'
 
+;call	SwitchOnLights
+;call	SetNightPanel
+		mov ah, Key[K_TAB]
+		and ah, Key[K_SHIFT]
+		_JZ GetOuttaNVG
+		mov Night,4
+		;cmp	Night,0	;day?
+		;je @F ;yes ->		
+		KBOUNCE Key[K_TAB] and KBOUNCE Key[K_SHIFT]  ;Frankie!
+		cmp NVG_set,1
+		je GoUnSetNVG
+		call	SetIRPalette
+		mov	GradEnabled,1
+		mov StarsEnabled,1
+		mov CloudsEnabled,1
+		mov NVG_set,1
+		jmp GetOuttaNVG
+GoUnSetNVG:
+		call	FixIRPalette
+		mov	GradEnabled,1
+		mov StarsEnabled,1
+		mov CloudsEnabled,1
+		mov NVG_set,0
+		mov Night,0
+		;jmp SkipCredits2
+;@@: 
+GetOuttaNVG:
+        
+
+
+
 		cmp	X_CtrlDevice,CTRL_DEV_KBD	;kbd?
 		jne	WashRoll			;no ->
 
+		mov	bl,Key[K_X]	;roll right
+		shl	bl,1
+		or	bl,Key[K_Z]	;roll left
+        jz Jumpz
+		mov	ax,X_AilPosn
+		mov	dx,KBD_AIL_RATE
+		call	UpdatePosn
+		mov	X_AilPosn,ax	
+        jmp AfterJumpz
+Jumpz:		
+		mov	bl,Key[K_CRSRRT]	;roll right
+		shl	bl,1
+		or	bl,Key[K_CRSRLF]	;roll left
+		mov	ax,X_AilPosn
+		mov	dx,KBD_AIL_RATE
+		call	UpdatePosn
+		mov	X_AilPosn,ax
+AfterJumpz:		
 ;* elevators
 
-		mov	bl,Key[K_CRSRDN]	;pitch up
+		mov	bl,Key[K_CRSRUP]	;pitch down
 		shl	bl,1
-		or	bl,Key[K_CRSRUP]	;pitch down
+		or	bl,Key[K_CRSRDN]	;pitch up
 
 		mov	ax,X_ElePosn
 		mov	dx,KBD_ELE_RATE
@@ -1906,15 +1986,9 @@ ExploreIntr100	PROC	FAR
 
 ;* ailerons
 
-		mov	bl,Key[K_CRSRRT]	;roll right
-		shl	bl,1
-		or	bl,Key[K_CRSRLF]	;roll left
 
-		mov	ax,X_AilPosn
-		mov	dx,KBD_AIL_RATE
-		call	UpdatePosn
-		mov	X_AilPosn,ax
-
+	
+		
 ;* speed (change Vtas directly - do not go via X_ThrotPosn)
 
 		xor	ax,ax		;assume stop dead
@@ -2000,6 +2074,7 @@ UpdatePosn	PROC	NEAR
 		mov	bx,dx
 		ABSV	ax		;ax = abs(posn), dx = sign(posn)
 		shl	bx,1		;washout rate = 2 * input rate
+		
 		sub	ax,bx		;washout
 		jnc	@F		;ok ->
 		xor	ax,ax		;washout to 0

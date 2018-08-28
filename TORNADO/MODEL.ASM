@@ -117,12 +117,13 @@
 		PUBLIC	DebugWeight
 		PUBLIC	EngFire1
 		PUBLIC	EngFire2
-
-		PUBLIC	KF_HUDContrast
+		PUBLIC	KF_HUDContrast		
 		PUBLIC	KF_HUDSwitch
 		PUBLIC	KF_HUDOption
+		PUBLIC	KF_TogglePitchCam
 		PUBLIC	KF_ResetTrkCam
 		PUBLIC	KF_ResetSatCam
+		PUBLIC	KF_AdjustHorizonDown		
 		PUBLIC	KF_ResetWpnCam
 		PUBLIC	KF_ZoomIn
 		PUBLIC	KF_ZoomOut
@@ -139,11 +140,14 @@
 		PUBLIC	KF_TAB2Toggle
 		PUBLIC	KF_PilotView
 		PUBLIC	KF_NavigView
+		PUBLIC	KF_NavigViewWithCtrl
 		PUBLIC	KF_LViewFix
 		PUBLIC	KF_RViewFix
 		PUBLIC	KF_LViewGlance
 		PUBLIC	KF_RViewGlance
 		PUBLIC	KF_TrackingCam
+		PUBLIC	KF_TrackingCamUp
+		PUBLIC  KF_AdjustHorizonUp
 		PUBLIC	KF_SatelliteCam
 		PUBLIC	KF_RemoteView
 		PUBLIC	KF_MapView
@@ -158,11 +162,14 @@
 		PUBLIC	KF_Range
 		PUBLIC	KF_GndText
 		PUBLIC	KF_HillText
+		PUBLIC	KF_HillTextCancel
+		;PUBLIC	KF_HillTextReverse
 		PUBLIC	KF_Clouds
 		PUBLIC	KF_Horizon
 		PUBLIC	KF_IronWork
 		PUBLIC	KF_Control
 		PUBLIC	KF_Sound
+		PUBLIC	KF_Yaw
 		PUBLIC	KF_Minimise
 		PUBLIC	KF_MFDSelect
 		PUBLIC	KF_MFDToggle
@@ -178,7 +185,12 @@
 		PUBLIC	KF_ArmGnd
 		PUBLIC	KF_ArmAir
 		PUBLIC	KF_ArmOff
-		PUBLIC	KF_Package
+		PUBLIC	KF_Package	
+PUBLIC KF_ChangeArmor		
+PUBLIC KF_ArmorCtrlShift
+PUBLIC KF_ArmorCtrlAlt
+PUBLIC KF_ArmorDown		
+PUBLIC KF_TurnEScopeOn
 		PUBLIC	KF_WpnMode
 		PUBLIC	KF_AirWeapon
 		PUBLIC	KF_WpnFire
@@ -192,6 +204,9 @@
 		PUBLIC	KF_Hold
 		PUBLIC	KF_TFollow
 		PUBLIC	KF_Throttle
+		PUBLIC  KF_SAMLauncherToTornado
+		PUBLIC  KF_AAAToTornadoView1
+		PUBLIC  KF_AAAToTornadoView2
 		PUBLIC	KF_AutoTrim
 		PUBLIC	KF_SkipWaypoint
 		PUBLIC	KF_SelectTgtWP
@@ -203,6 +218,7 @@
 		PUBLIC	KF_JoySensHigh
 		PUBLIC	KF_Quit
 		PUBLIC	KF_Pause
+PUBLIC KF_Full_MFD
 
 		PUBLIC	SWEEP_D_25
 		PUBLIC	SWEEP_D_45
@@ -212,6 +228,7 @@
 		PUBLIC	XWIND_VMIN
 		PUBLIC	XWIND_VMAX
 
+EXTRN	VisualInfo:FAR		
 		EXTRN	InitCtrlDevice:FAR
 		EXTRN	LimitPFine:FAR
 		EXTRN	CalcDeltaTime:FAR
@@ -1144,7 +1161,8 @@ XWindDirTimer	DW	XWIND_DIR_INT 	;(secs * 100)
 KbdCtrlSwitch	DW	KbdElevators	;CTRL_DEV_KBD1
 		DW	KbdElevators	;CTRL_DEV_KBD2
 		DW	KbdRudder	;CTRL_DEV_JOY1
-		DW	KbdStatus	;CTRL_DEV_JOY2
+		;DW	KbdStatus	;CTRL_DEV_JOY2
+		DW	KbdAutoThrot	;CTRL_DEV_JOY2  ATARIBABY - changed from KbdStatus to KbdAutoThrot for reworked analog throttle
 
 ;* elevator switch wrt AltMode
 
@@ -1292,9 +1310,10 @@ KF_HUDSwitch	GAMEKEY	<>	;HUD switch on / off
 KF_HUDOption	GAMEKEY <>	;HUD airspeed kts or mach num option
 
 ;* camera control keys (for outside views)
-
+KF_TogglePitchCam GAMEKEY	<>	;reset toggle of pitch horizon 
 KF_ResetTrkCam	GAMEKEY	<>	;reset tracking camera position
 KF_ResetSatCam	GAMEKEY	<>	;reset satellite camera position
+KF_AdjustHorizonDown GAMEKEY	<>	;adjust horizon view down
 KF_ResetWpnCam	GAMEKEY <>	;reset weapon view camera position
 KF_ZoomIn	GAMEKEY	<>	;camera zoom in
 KF_ZoomOut	GAMEKEY	<>	;camera zoom out
@@ -1325,11 +1344,14 @@ KF_TAB2Toggle	GAMEKEY	<>	;rhs TAB on / off
 
 KF_PilotView	GAMEKEY	<>	;pilot view
 KF_NavigView	GAMEKEY	<>	;navigator view
+KF_NavigViewWithCtrl	GAMEKEY	<>	;navigator view - revert from full-screen FLIR/TIALD to normal view FLIR/TIALD
 KF_LViewFix	GAMEKEY	<>	;left view (fixed)
 KF_RViewFix	GAMEKEY	<>	;right view (fixed)
 KF_LViewGlance	GAMEKEY	<>	;left view (glance)
 KF_RViewGlance	GAMEKEY	<>	;right view (glance)
-KF_TrackingCam	GAMEKEY	<>	;tracking camera
+KF_TrackingCam	GAMEKEY	<>	;tracking shift down camera
+KF_AdjustHorizonUp	GAMEKEY	<>	;tracking shift down camera
+KF_TrackingCamUp	GAMEKEY	<>	;tracking shift up camera
 KF_SatelliteCam	GAMEKEY	<>	;satellite camera
 KF_RemoteView	GAMEKEY	<>	;remote view
 KF_MapView	GAMEKEY	<>	;map view
@@ -1347,11 +1369,14 @@ KF_ViewWeapon	GAMEKEY	<>	;weapon view
 KF_Range	GAMEKEY <>	;visual range select
 KF_GndText	GAMEKEY	<>	;ground texture select
 KF_HillText	GAMEKEY	<>	;hill face texture select
+KF_HillTextCancel	GAMEKEY	<>	;hill face texture select
+;KF_HillTextReverse GAMEKEY <>
 KF_Clouds	GAMEKEY	<>	;clouds select
 KF_Horizon	GAMEKEY	<>	;horizon select
 KF_IronWork	GAMEKEY	<>	;ironwork select
 KF_Control	GAMEKEY	<>	;control select
 KF_Sound	GAMEKEY	<>	;sound select
+KF_Yaw	GAMEKEY	<>	;sound select
 KF_Minimise	GAMEKEY	<>	;minimise / restore select
 
 ;* secondary flight controls
@@ -1390,6 +1415,11 @@ KF_ArmAir	GAMEKEY <>	;select air attack mode
 KF_ArmOff	GAMEKEY	<>	;cancel attack mode
 
 KF_Package	GAMEKEY	<>	;select weapons package
+KF_ChangeArmor GAMEKEY	<>	;select weapons package
+KF_ArmorCtrlShift GAMEKEY	<>	;select weapons package
+KF_ArmorCtrlAlt GAMEKEY	<>	;select weapons package
+KF_ArmorDown GAMEKEY	<>	;select weapons package
+KF_TurnEScopeOn GAMEKEY <>
 KF_WpnMode	GAMEKEY	<>	;select weapon delivery mode
 KF_AirWeapon	GAMEKEY <>	;cycle air-to-air weapons
 
@@ -1410,6 +1440,9 @@ KF_Track	GAMEKEY <>	;track acquire mode (fly to next waypoint)
 KF_Hold		GAMEKEY <>	;alt and hdg hold mode
 KF_TFollow	GAMEKEY <>	;terrain follow mode
 KF_Throttle	GAMEKEY <>	;auto-throttle mode
+KF_SAMLauncherToTornado	GAMEKEY <>	;view from SAM Launcher to Tornado mode
+KF_AAAToTornadoView1	 GAMEKEY <>	;view from ZSU1 to Tornado mode
+KF_AAAToTornadoView2 GAMEKEY <>	;view from ZSU2  to Tornado mode
 KF_AutoTrim	GAMEKEY	<>	;auto-trim engage
 
 ;* waypoint selection keys
@@ -1434,6 +1467,7 @@ KF_JoySensHigh	GAMEKEY	<>	;high joystick sensitivity
 
 KF_Quit		GAMEKEY	<>	;quit game
 KF_Pause	GAMEKEY	<>	;pause / resume
+KF_Full_MFD GAMEKEY	<>	;full MFD immediately
 
 		EVEN
 
@@ -1680,11 +1714,12 @@ Model		PROC	FAR
 
 	IF	OPT_TURBO EQ 1
 
-		test	Key[K_BACKSLASH],1
-		jz	@F
-		mov	LastFrame,100
-		mov	DeltaTime,32767
-@@:
+		;test	Key[K_BACKSLASH],1
+		;jz	@F
+		;mov	LastFrame,100
+		;mov	DeltaTime,32767
+		;call	VisualInfo
+;@@:
 
 	ENDIF
 
@@ -1752,11 +1787,14 @@ KF_UpdatePilot	LABEL	NEAR
 	IF	OPT_DEMO EQ 0
 
 		KBOUNCE	KF_HUDContrast
+		KBOUNCE KF_TogglePitchCam
 		KBOUNCE	KF_HUDSwitch
 		KBOUNCE	KF_HUDOption
 		
 		KBOUNCE	KF_ResetTrkCam
 		KBOUNCE	KF_ResetSatCam
+		KBOUNCE KF_AdjustHorizonDown		
+		KBOUNCE KF_AdjustHorizonup	
 		KBOUNCE	KF_ResetWpnCam
 		KFOLLOW	KF_ZoomIn
 		KFOLLOW	KF_ZoomOut
@@ -1793,11 +1831,14 @@ KF_UpdateCommon	LABEL	NEAR
 
 		KBOUNCE	KF_PilotView
 		KBOUNCE	KF_NavigView
+		KBOUNCE	KF_NavigViewWithCtrl
 		KBOUNCE	KF_LViewFix
 		KBOUNCE	KF_RViewFix
 		KFOLLOW	KF_LViewGlance
 		KFOLLOW	KF_RViewGlance
 		KBOUNCE	KF_TrackingCam
+		KBOUNCE	KF_TrackingCamUp
+		KBOUNCE KF_AdjustHorizonUp
 		KBOUNCE	KF_SatelliteCam
 		KBOUNCE	KF_RemoteView
 		KBOUNCE	KF_MapView
@@ -1813,6 +1854,7 @@ KF_UpdateCommon	LABEL	NEAR
 		KBOUNCE	KF_IronWork
 		KBOUNCE	KF_Control
 		KBOUNCE	KF_Sound
+		KBOUNCE	KF_Yaw
 
 		KBOUNCE	KF_Gear
 		KBOUNCE	KF_WheelBrakes
@@ -1841,6 +1883,11 @@ KF_UpdateCommon	LABEL	NEAR
 		KBOUNCE	KF_ArmOff
 
 		KBOUNCE	KF_Package
+		KBOUNCE KF_ChangeArmor
+		KBOUNCE KF_ArmorCtrlShift
+		KBOUNCE KF_ArmorCtrlAlt
+		KBOUNCE KF_ArmorDown
+		KBOUNCE KF_TurnEScopeOn
 		KBOUNCE	KF_WpnMode
 		KBOUNCE	KF_AirWeapon
 
@@ -1857,6 +1904,9 @@ KF_UpdateCommon	LABEL	NEAR
 		KBOUNCE	KF_Hold
 		KBOUNCE	KF_TFollow
 		KBOUNCE	KF_Throttle
+		KBOUNCE KF_SAMLauncherToTornado
+		KBOUNCE KF_AAAToTornadoView1
+		KBOUNCE KF_AAAToTornadoView2
 		KBOUNCE	KF_AutoTrim
 
 		KBOUNCE	KF_SkipWaypoint
@@ -1882,11 +1932,13 @@ UpdateDisabled	LABEL	NEAR	;update when input disabled
 ;---------------------------
 
 		KCLEAR	KF_HUDContrast
+		KCLEAR  KF_TogglePitchCam
 		KCLEAR	KF_HUDSwitch
 		KCLEAR	KF_HUDOption
 		
 		KCLEAR	KF_ResetTrkCam
 		KCLEAR	KF_ResetSatCam
+		KCLEAR  KF_AdjustHorizonDown		
 		KCLEAR	KF_ResetWpnCam
 		KCLEAR	KF_ZoomIn
 		KCLEAR	KF_ZoomOut
@@ -1902,14 +1954,16 @@ UpdateDisabled	LABEL	NEAR	;update when input disabled
 		KCLEAR	KF_TAB1Toggle
 		KCLEAR	KF_TAB2Select
 		KCLEAR	KF_TAB2Toggle
-
 		KCLEAR	KF_PilotView
 		KCLEAR	KF_NavigView
+		KCLEAR  KF_NavigViewWithCtrl
 		KCLEAR	KF_LViewFix
 		KCLEAR	KF_RViewFix
 		KCLEAR	KF_LViewGlance
 		KCLEAR	KF_RViewGlance
 		KCLEAR	KF_TrackingCam
+		KCLEAR	KF_TrackingCamUp
+		KCLEAR  KF_AdjustHorizonUp
 		KCLEAR	KF_SatelliteCam
 		KCLEAR	KF_RemoteView
 		KCLEAR	KF_MapView
@@ -1925,6 +1979,7 @@ UpdateDisabled	LABEL	NEAR	;update when input disabled
 		KCLEAR	KF_IronWork
 		KCLEAR	KF_Control
 		KCLEAR	KF_Sound
+		KCLEAR  KF_Yaw
 
 		KCLEAR	KF_Gear
 		KCLEAR	KF_WheelBrakes
@@ -1947,6 +2002,11 @@ UpdateDisabled	LABEL	NEAR	;update when input disabled
 		KCLEAR	KF_BoreSight
 		KCLEAR	KF_CycleAirTgt
 		KCLEAR	KF_CancelAirTgt
+		KCLEAR  KF_ChangeArmor
+		KCLEAR  KF_ArmorCtrlShift
+		KCLEAR  KF_ArmorCtrlAlt
+		KCLEAR  KF_ArmorDown
+		KCLEAR  KF_TurnEScopeOn
 
 		KCLEAR	KF_ArmGnd
 		KCLEAR	KF_ArmAir
@@ -1958,7 +2018,7 @@ UpdateDisabled	LABEL	NEAR	;update when input disabled
 
 		KCLEAR	KF_WpnFire
 		KCLEAR	KF_WpnCommit
-
+		
 		KCLEAR	KF_ECM		
 		KCLEAR	KF_Chaff	
 		KCLEAR	KF_Flare
@@ -1969,6 +2029,9 @@ UpdateDisabled	LABEL	NEAR	;update when input disabled
 		KCLEAR	KF_Hold
 		KCLEAR	KF_TFollow
 		KCLEAR	KF_Throttle
+		KCLEAR  KF_SAMLauncherToTornado
+		KCLEAR  KF_AAAToTornadoView1
+		KCLEAR  KF_AAAToTornadoView2
 		KCLEAR	KF_AutoTrim
 
 		KCLEAR	KF_SkipWaypoint
@@ -1988,6 +2051,8 @@ UpdateDisabled	LABEL	NEAR	;update when input disabled
 ContGameKeys:	KBOUNCE	KF_Range
 		KBOUNCE	KF_GndText
 		KBOUNCE	KF_HillText
+		KBOUNCE	KF_HillTextCancel
+		;KBOUNCE KF_HillTextReverse
 		KBOUNCE	KF_Clouds
 		KBOUNCE	KF_Horizon
 		KBOUNCE	KF_Minimise
@@ -1998,6 +2063,7 @@ UpdatePaused	LABEL	NEAR	;update when input disabled or paused
 
 		KBOUNCE	KF_Quit
 		KBOUNCE	KF_Pause
+		KBOUNCE KF_Full_MFD
 
 		ret
 
@@ -2698,123 +2764,123 @@ JoyRudder	LABEL	NEAR
 @@:		mov	RudPosn,ax
 
 ;===========================
-JoyThrottle	LABEL	NEAR
+;JoyThrottle	LABEL	NEAR
 ;===========================
 
-		test	AutoThrot,1	;auto-throttle?
-		_JNZ	JoyAutoThrot	;yes ->
+;		test	AutoThrot,1	;auto-throttle?
+;		_JNZ	JoyAutoThrot	;yes ->
 
 ;-----------------
 ;* manual throttle
 ;-----------------
 
-		mov	ax,JoyB_Y
+;		mov	ax,JoyB_Y
 
-		neg	ax		;flip joystick sense
+;		neg	ax		;flip joystick sense
 
-		_JZ	JoyElevators	;no deflection ->
+;		_JZ	JoyElevators	;no deflection ->
 
 ;* throttle change = (joy val * (100 * 256 / 32768) * DeltaTime * 2) / 128
 
-		mov	dx,100*256
-		imul	dx
-		FRACADJ	dx
+;		mov	dx,100*256
+;		imul	dx
+;		FRACADJ	dx
 
-		mov	ax,DeltaTime
-		imul	dx
+;		mov	ax,DeltaTime
+;		imul	dx
 
-		REPT	6		;* 2 / 128
-		sar	dx,1
-		rcr	ax,1
-		ENDM
+;		REPT	6		;* 2 / 128
+;		sar	dx,1
+;		rcr	ax,1
+;		ENDM
 			      
-		test	dx,dx		;open or close?
+;		test	dx,dx		;open or close?
 
-		js	JoyCloseThrot	;close ->
+;		js	JoyCloseThrot	;close ->
 
 ;---------------
 ;* open throttle
 ;---------------
 
-		mov	bx,Reheat
-		or	bx,ReheatFine	;adjust reheat?
-		jnz	JoyIncReheat	;yes ->
+;		mov	bx,Reheat
+;		or	bx,ReheatFine	;adjust reheat?
+;		jnz	JoyIncReheat	;yes ->
 
-		cmp	Throttle,256	;max throttle?
-		je	JoyReheatOn	;yes, test for engage reheat ->
+;		cmp	Throttle,256	;max throttle?
+;		je	JoyReheatOn	;yes, test for engage reheat ->
 
-		add	ThrottleFine,ax
-		adc	Throttle,dx
+;		add	ThrottleFine,ax
+;		adc	Throttle,dx
 
-		cmp	Throttle,256	;exceed max throttle?
-		jb	@F		;no ->
+;		cmp	Throttle,256	;exceed max throttle?
+;		jb	@F		;no ->
 
-		mov	Throttle,256
-		mov	ThrottleFine,0
+;		mov	Throttle,256
+;		mov	ThrottleFine,0
 
-@@:		jmp	JoyElevators
+;@@:		jmp	JoyElevators
 
-JoyIncReheat:	add	ReheatFine,ax
-		adc	Reheat,dx
+;JoyIncReheat:	add	ReheatFine,ax
+;		adc	Reheat,dx
 
-		cmp	Reheat,128	;exceed max reheat?
-		jb	@F		;no ->
+;		cmp	Reheat,128	;exceed max reheat?
+;		jb	@F		;no ->
 
-		mov	Reheat,128
-		mov	ReheatFine,0
+;		mov	Reheat,128
+;		mov	ReheatFine,0
 
-@@:		jmp	JoyElevators
+;@@:		jmp	JoyElevators
 
 ;* release joystick and push again to engage reheat
 
-JoyReheatOn:	cmp	OldJoyB_Y,0	;joystick released last frame?
-		jne	@F		;no ->
+;JoyReheatOn:	cmp	OldJoyB_Y,0	;joystick released last frame?
+;		jne	@F		;no ->
 
-		mov	Reheat,0
-		mov	ReheatFine,1
+;		mov	Reheat,0
+;		mov	ReheatFine,1
 		 
-@@:		jmp	JoyElevators
+;@@:		jmp	JoyElevators
 
 ;----------------
 ;* close throttle
 ;----------------
 
-JoyCloseThrot:	mov	bx,Reheat
-		or	bx,ReheatFine	;adjust reheat?
-		jnz	JoyDecReheat	;yes ->
+;JoyCloseThrot:	mov	bx,Reheat
+;		or	bx,ReheatFine	;adjust reheat?
+;		jnz	JoyDecReheat	;yes ->
 
-		cmp	Throttle,256	;max throttle?
-		je	JoyReheatOff	;yes, test for disengage reheat ->
+;		cmp	Throttle,256	;max throttle?
+;		je	JoyReheatOff	;yes, test for disengage reheat ->
 
-		add	ThrottleFine,ax
-		adc	Throttle,dx
+;		add	ThrottleFine,ax
+;		adc	Throttle,dx
 
-		jns	@F
+;		jns	@F
 
-		mov	Throttle,0
-		mov	ThrottleFine,0
+;		mov	Throttle,0
+;		mov	ThrottleFine,0
 
-@@:		jmp	JoyElevators
+;@@:		jmp	JoyElevators
 
-JoyDecReheat: 	add	ReheatFine,ax
-		adc	Reheat,dx
+;JoyDecReheat: 	add	ReheatFine,ax
+;		adc	Reheat,dx
 
-		jns	@F
+;		jns	@F
 
-		mov	Reheat,0
-		mov	ReheatFine,0
+;		mov	Reheat,0
+;		mov	ReheatFine,0
 
-@@:		jmp	JoyElevators
+;@@:		jmp	JoyElevators
 
 ;* release joystick and pull again to disengage reheat
 
-JoyReheatOff:	cmp	OldJoyB_Y,0	;joystick released last frame?
-		jne	@F		;no ->
+;JoyReheatOff:	cmp	OldJoyB_Y,0	;joystick released last frame?
+;		jne	@F		;no ->
 
-		mov	Throttle,255
-		mov	ThrottleFine,65535
+;		mov	Throttle,255
+;		mov	ThrottleFine,65535
 		
-@@:		jmp	JoyElevators
+;@@:		jmp	JoyElevators
 
 ;------------------------------
 ;* increase / decrease AutoVias
@@ -2822,34 +2888,96 @@ JoyReheatOff:	cmp	OldJoyB_Y,0	;joystick released last frame?
 
 ;* do not adjust AutoVias if approach mode
 
-JoyAutoThrot:	cmp	AutoMode,AUTO_APPROACH	;approach mode?
-		je	JoyElevators		;yes ->
+;JoyAutoThrot:	cmp	AutoMode,AUTO_APPROACH	;approach mode?
+;		je	JoyElevators		;yes ->
 
-		mov	ax,JoyB_Y
+;		mov	ax,JoyB_Y
 
-		neg	ax		;flip joystick sense
+;		neg	ax		;flip joystick sense
 
 ;* delta = LastFrame * 2 * joy val
 
-		mov	dx,LastFrame
-		shl	dx,1
-		imul	dx
+;		mov	dx,LastFrame
+;		shl	dx,1
+;		imul	dx
 
-		add	AutoViasFine,ax
-		adc	AutoVias,dx
+;		add	AutoViasFine,ax
+;		adc	AutoVias,dx
 
-		jns	@F		;>= 0 ->
+;		jns	@F		;>= 0 ->
 
-		mov	AutoVias,0
-		mov	AutoViasFine,0
+;		mov	AutoVias,0
+;		mov	AutoViasFine,0
 
-		jmp	JoyElevators
+;		jmp	JoyElevators
 
-@@:		cmp	AutoVias,MAX_AUTO_VIAS
-		jb	JoyElevators
+;@@:		cmp	AutoVias,MAX_AUTO_VIAS
+;		jb	JoyElevators
 
-		mov	AutoVias,MAX_AUTO_VIAS
-		mov	AutoViasFine,0
+;		mov	AutoVias,MAX_AUTO_VIAS
+;		mov	AutoViasFine,0
+
+;===========================
+JoyThrottle	LABEL	NEAR
+;===========================
+;ATARIBABY joystick autothrottle code removed - keyboard +/- is used 
+
+		test	AutoThrot,1	;auto-throttle?
+		_JNZ	JoyElevators	;yes ->
+
+;-----------------
+;* manual throttle
+;-----------------
+;ATARIBABY reworked analog throttle to work like real one
+
+		; joy possition, from 0 to 32766
+		; compute step for 0-255 throttle range
+		mov	ax,22000 ;dry thrust stop 
+		mov	dx,0
+		mov	bx,255
+		idiv bx			; ax is 1 step.
+
+		mov	dx,0		; be sure, we do not throw owwerflow
+		mov	bx,ax
+
+		mov	ax,JoyB_Y
+		neg	ax		;flip joystick sense
+		sar ax,1
+		add ax, 16383	; joy possition, from 0 to 32766
+
+		cmp	ax,32000 ;reheat start
+		jb	ABoff		;no ->
+		
+		mov cx,0
+		cmp Rpm1,100*256 ;engine1 at 100% RPM?
+		jb	@F
+		inc cx
+@@:		cmp Rpm2,100*256 ;engine1 at 100% RPM?
+		jb	@F
+		inc cx
+@@:		cmp cx,0 ;if any engine already at 100% lets kick afterburner
+		jg ABon
+		jmp ABoff
+
+ABon:	mov	Reheat,128
+		mov	ReheatFine,0
+		jmp ABskip
+
+ABoff:	mov	Reheat,0
+		mov	ReheatFine,0
+
+ABskip:	idiv bx			; ax is x steps.
+		mov	dx,0		; ignore remainder
+	
+ 		mov Throttle,ax
+		mov	ThrottleFine,0
+
+		cmp	Throttle,256	;exceed max throttle?
+		jb	JoyElevators		;no ->
+		
+		mov	Throttle,256
+		mov	ThrottleFine,0
+
 
 ;===========================
 JoyElevators	LABEL	NEAR
@@ -6533,13 +6661,26 @@ SortAirborne:	mov	ax,ZftLo
 		call	SurfaceCheck
 
 		cmp	ax,SURFACE_ROAD	;landed on a road?
-		jne	@F		;no ->
+		jne	DidntLandOnRoad		;no ->
 
 		or	Landing,LAND_ROAD
 
+;		;Refill by hitting "3" key!
+;		KTEST KF_HillText		
+;		jz @F
+;		KCLEAR KF_HillText
+;		;Check if out of fuel?
+;		mov	ax,FuelWt
+;		test	ax,ax		;out of fuel?
+;		jz	RefuelPlease	;yes ->
+;		jmp SkipRefuelPlease
+;RefuelPlease:
+		;mov	FuelWt,2000
+;SkipRefuelPlease:
+;@@:			
 ;* no collisions?
 
-@@:		test	NoCollisions,1	;no collisions?
+DidntLandOnRoad:		test	NoCollisions,1	;no collisions?
 		_JNZ	ContLanding	;yes ->
 
 ;* check approx attitude for landing
@@ -7709,18 +7850,20 @@ KF_ScanPilot	LABEL	NEAR
 
 	IF	OPT_DEMO EQ 0
 
-		KUPDATE	KF_HUDContrast,K_H
+		KUPDATE KF_TogglePitchCam,K_ALT,_AND_,K_P
 		KUPDATE	KF_HUDSwitch,K_CTRL,_AND_,K_H
 		KUPDATE	KF_HUDOption,K_ALT,_AND_,K_H
 
 		KUPDATE	KF_ResetTrkCam,K_CTRL,_AND_,K_F1
 		KUPDATE	KF_ResetSatCam,K_CTRL,_AND_,K_F2
+		KUPDATE	KF_Range,K_1
+		KUPDATE	KF_Minimise,K_0
 		KUPDATE	KF_ResetWpnCam,K_CTRL,_AND_,K_V
 		KUPDATE	KF_ZoomIn,K_LESSTHAN
 		KUPDATE	KF_ZoomOut,K_GRTRTHAN
 		KUPDATE	KF_FastZoomIn,K_SHIFT,_AND_,K_LESSTHAN
 		KUPDATE	KF_FastZoomOut,K_SHIFT,_AND_,K_GRTRTHAN
-	    	KUPDATE	KF_TrackClk,K_X
+	    KUPDATE	KF_TrackClk,K_X
 		KUPDATE	KF_TrackAClk,K_Z
 		KUPDATE	KF_FastTrkClk,K_SHIFT,_AND_,K_X
 		KUPDATE	KF_FastTrkAClk,K_SHIFT,_AND_,K_Z
@@ -7734,7 +7877,7 @@ KF_ScanNavig	LABEL	NEAR
 ;---------------------------
 
 	IF	OPT_DEMO EQ 0
-
+	
 		KUPDATE	KF_DispSelect,K_TAB
 		KUPDATE	KF_TAB1Select,K_OPN_SQ_BRKT
 		KUPDATE	KF_TAB1Toggle,K_CTRL,_AND_,K_OPN_SQ_BRKT
@@ -7751,13 +7894,16 @@ KF_ScanCommon	LABEL	NEAR
 
 		KUPDATE	KF_PilotView,K_HOME
 		KUPDATE	KF_NavigView,K_PGUP
+		KUPDATE	KF_NavigViewWithCtrl,K_CTRL,_AND_,K_PGUP
 		KUPDATE	KF_LViewFix,K_SHIFT,_AND_,K_END
 		KUPDATE	KF_RViewFix,K_SHIFT,_AND_,K_PGDN
 		KUPDATE	KF_LViewGlance,K_END
 		KUPDATE	KF_RViewGlance,K_PGDN
 		KUPDATE	KF_TrackingCam,K_F1
+		KUPDATE	KF_TrackingCamUp,K_ALT,_AND_,K_F1
 		KUPDATE	KF_SatelliteCam,K_F2
 		KUPDATE	KF_RemoteView,K_F3
+		
 		KUPDATE	KF_Spectator,K_F4
 		KUPDATE	KF_RestoreSpec,K_CTRL,_AND_,K_F4
 		KUPDATE	KF_DroneView,K_F5
@@ -7770,7 +7916,8 @@ KF_ScanCommon	LABEL	NEAR
 
 		KUPDATE	KF_IronWork,K_6
 		KUPDATE	KF_Control,K_7
-		KUPDATE	KF_Sound,K_8
+        KUPDATE	KF_Sound,K_8
+		KUPDATE	KF_Yaw,K_9
 
 		KUPDATE	KF_Gear,K_U,_OR_,K_G
 		KUPDATE	KF_WheelBrakes,K_B
@@ -7799,6 +7946,11 @@ KF_ScanCommon	LABEL	NEAR
 		KUPDATE	KF_ArmOff,K_CTRL,_AND_,K_ENTER
 
 		KUPDATE	KF_Package,K_K
+		KUPDATE KF_ChangeArmor,K_ALT,_AND_,K_SHIFT
+		KUPDATE KF_ArmorCtrlShift,K_CTRL,_AND_,K_SHIFT
+		KUPDATE KF_ArmorCtrlAlt,K_CTRL,_AND_,K_ALT
+		KUPDATE KF_ArmorDown,K_ALT,_AND_,K_BACKSLASH
+		KUPDATE KF_TurnEScopeOn,K_SHIFT,_AND_,K_BACKSLASH
 		KUPDATE	KF_WpnMode,K_L
 		KUPDATE	KF_AirWeapon,K_SEMICOLON
 
@@ -7807,14 +7959,16 @@ KF_ScanCommon	LABEL	NEAR
 
 		KUPDATE	KF_ECM,K_E
 		KUPDATE	KF_Chaff,K_C
-	        KUPDATE	KF_Flare,K_F
-
+	    KUPDATE	KF_Flare,K_F
 		KUPDATE	KF_AutoCancel,K_ESC
-		KUPDATE	KF_Approach,K_F6
+		KUPDATE	KF_Approach,K_F6	
 		KUPDATE	KF_Track,K_F7
 		KUPDATE	KF_Hold,K_F8
 		KUPDATE	KF_TFollow,K_F9
 		KUPDATE	KF_Throttle,K_F10
+		KUPDATE	KF_SAMLauncherToTornado,K_F11
+		KUPDATE KF_AAAToTornadoView1,K_F12
+		KUPDATE KF_AAAToTornadoView2,K_ALT,_AND_,K_F12
 		KUPDATE	KF_AutoTrim,K_CENTRE
 
 		KUPDATE	KF_SkipWaypoint,K_N
@@ -7832,17 +7986,17 @@ KF_ScanCommon	LABEL	NEAR
 		KUPDATE	KF_JoySensHigh,K_SHIFT,_AND_,K_Y
 
 	ENDIF
-
-;---------------------------
 ScanDisabled	LABEL	NEAR	;scan when input disabled
 ;---------------------------
 
-		KUPDATE	KF_Range,K_1
+		;KUPDATE	KF_Range,K_1
 		KUPDATE	KF_GndText,K_2
 		KUPDATE	KF_HillText,K_3
+		KUPDATE	KF_HillTextCancel,K_SHIFT,_AND_,K_3
+		;KUPDATE KF_HillTextReverse,K_ALT,_AND_,K_3
 		KUPDATE	KF_Clouds,K_4
 		KUPDATE	KF_Horizon,K_5
-		KUPDATE	KF_Minimise,K_0
+		;KUPDATE	KF_Minimise,K_0
 
 ;---------------------------
 ScanPaused	LABEL	NEAR	;scan when input disabled or paused
@@ -7850,6 +8004,7 @@ ScanPaused	LABEL	NEAR	;scan when input disabled or paused
 
 		KUPDATE	KF_Quit,K_CTRL,_AND_,K_Q
 		KUPDATE	KF_Pause,K_P
+		KUPDATE KF_Full_MFD, K_SHIFT,_AND_,K_D
 
 ;-----------
 ;* wash roll
@@ -9115,3 +9270,4 @@ MODCODE		ENDS
 		END
 
 
+

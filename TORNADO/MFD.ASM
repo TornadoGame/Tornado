@@ -9,16 +9,44 @@
 ;****************************************************************************
 
 		OPTION	M510		;<<<<< MASM v5.10 <<<<<
+PUBLIC DamagedDispMFD
+PUBLIC UpdateMFD
+PUBLIC RadarDisp
+PUBLIC ModePtr
+PUBLIC AutoPilotDisp
+PUBLIC ILSDisp
+PUBLIC GndMappingRadar
 
 		PUBLIC	UpdatePilotMFD
 		PUBLIC	UpdateNavigMFD
 		PUBLIC	SelectRadarMFD
 		PUBLIC	SelectAutoMFD
-
+		
+;PUBLIC Cannon$
 		PUBLIC	DrawIRImage
 
 		PUBLIC	PILOT_MFD
 		PUBLIC	NAVIG_MFD
+;EXTRN	NightVisionState:BYTE		
+EXTRN QuieterCockpit:BYTE
+EXTRN	FullScreen:BYTE		
+EXTRN   ShiftDwasPressed:BYTE
+;EXTRN   KF_NVG_MFD:BYTE
+;EXTRN   KF_NONVG_MFD:BYTE
+EXTRN	NavigPanel:BYTE
+EXTRN	IronWork:BYTE		
+EXTRN	UpdateRWR:NEAR
+EXTRN	LoadExtrnPan:NEAR    ;added on 26/11/2017 hacked
+EXTRN	UpdateExtrn:NEAR     ;added on 26/11/2017 hacked
+EXTRN	UpdateHUD2:NEAR	     ;added on 30/11/2017 hacked frankie
+EXTRN	UpdateHUD:NEAR	
+EXTRN  UpdateEScope2:NEAR
+
+		EXTRN	DeltaTime:WORD
+		EXTRN	KF_TrackClk:BYTE
+		EXTRN	KF_TrackAClk:BYTE
+		EXTRN	KF_FastTrkClk:BYTE
+		EXTRN	KF_FastTrkAClk:BYTE
 
 		EXTRN	RandX:FAR
 		EXTRN	LineDraw:FAR
@@ -45,7 +73,7 @@
 		EXTRN	PrintChar:FAR
 
 		EXTRN	DrawRadarNoise:NEAR
-
+;EXTRN	Cannons:WORD ;hacked
 		EXTRN	M_VIEW:WORD
 		EXTRN	TMP_VIEW:WORD
 		EXTRN	RadarMode:WORD
@@ -94,7 +122,7 @@
 		EXTRN	AirRadarRng:WORD
 		EXTRN	TornadoType:WORD
 		EXTRN	AirTgtPtr:WORD
-
+EXTRN	KF_Full_MFD:BYTE
 		EXTRN	KF_MFDSelect:BYTE
 		EXTRN	KF_MFDToggle:BYTE
 		EXTRN	KF_MapZoomIn:BYTE
@@ -135,8 +163,8 @@
 		INCLUDE	\LIB8086\PRINT.INC
 		INCLUDE	\LIB8086\USEFUL.INC
 
+	
 ;============================================================================
-
 		EXTRN	TAB1:TAB
 		EXTRN	TAB2:TAB
 
@@ -145,13 +173,39 @@
 ;============================================================================
 
 DATA		SEGMENT PARA PUBLIC 'DATA'
+	
+HUD_X_ORG	EQU	160
+HUD_Y_ORG	EQU	96
+
+;--------------- experimental-----------------------
+;VP		VIEWPORT <>
+
+
+TAB_WIDTH	EQU	96
+TAB_DEPTH	EQU	72
+TAB_WIDTH_TIALD	EQU	320
+TAB_DEPTH_TIALD	EQU	192
+
+XC_TIALD		EQU	TAB_WIDTH_TIALD/2	;centre x
+YC_TIALD		EQU	TAB_DEPTH_TIALD/2-1	;centre y
+
+;------------
+;* TAB origin
+;------------
+
+;XOrg		DW	0
+;YOrg		DB	0,0
+
+XOrg_TIALD		DW	0
+YOrg_TIALD		DB	0,0
+
 
 ;----------
 ;* MFD size
 ;----------
 
-MFD_WIDTH	EQU	64
-MFD_DEPTH	EQU	48
+MFD_WIDTH	EQU	64  ;Ori = 64, trying 96
+MFD_DEPTH	EQU	48  ;Ori = 48, trying 72
 
 XC		EQU	MFD_WIDTH/2	;centre x
 YC		EQU	MFD_DEPTH/2-1	;centre y
@@ -174,6 +228,7 @@ YOrg		DB	0,0		;sometimes accessed as word
 
 PILOT_MFD	MFD	<128,144,1,MFD_MAP,MAP_ZOOM1,MAP_ORG_CENTRE,OFFSET SSF_PilotMFD,0,1>
 
+
 ;----------------------
 ;* navigator's MFD data
 ;----------------------
@@ -184,17 +239,19 @@ PILOT_MFD	MFD	<128,144,1,MFD_MAP,MAP_ZOOM1,MAP_ORG_CENTRE,OFFSET SSF_PilotMFD,0,
 ;*	 into account of the default TAB modes. The default MFD mode should
 ;*       be common to all Tornado variants.
 
-NAVIG_MFD	MFD	<128,57,1,MFD_MAP,MAP_ZOOM1,MAP_ORG_CENTRE,OFFSET SSF_NavigMFD,0,1>
+;NAVIG_MFD	MFD	<128,57,1,MFD_FLIR,MAP_ZOOM1,MAP_ORG_CENTRE,OFFSET SSF_NavigMFD,0,1>
+NAVIG_MFD	MFD	<128,57,1,MFD_AUTO_PILOT,MAP_ZOOM1,MAP_ORG_CENTRE,OFFSET SSF_NavigMFD,0,1>
 
 ;----------------------
 ;* mouse required flags
 ;----------------------
 
-MFDMouseFlags	DB	0		;MFD_MAP
+MFDMouseFlags	DB	1		;MFD_MAP
 		DB	1		;MFD_RADAR
 		DB	0		;MFD_AUTO_PILOT
 		DB	0		;MFD_ILS
-		DB	0		;MFD_FLIR
+		DB	0		;MFD_FLIR_ORI
+		DB	0		;MFD_FLIR		
 
 		EVEN
 
@@ -209,6 +266,7 @@ SelectSwitch	DW	SelectMap	;MFD_MAP
 		DW	SelectAFDS	;MFD_AUTO_PILOT
 		DW	SelectModeOk	;MFD_ILS
 		DW	SelectFLIR	;MFD_FLIR
+		DW	SelectFLIR	;MFD_FLIR		
 		DW	SelectLoopBack	;MFD_LOOPBACK
 
 ;-------------------------
@@ -219,6 +277,7 @@ DispSwitch	DW	MapDisp		;MFD_MAP
 		DW	RadarDisp	;MFD_RADAR
 		DW	AutoPilotDisp	;MFD_AUTO_PILOT
 		DW	ILSDisp		;MFD_ILS
+		DW	FLIRDisp_ori	;MFD_FLIR_ORI
 		DW	FLIRDisp	;MFD_FLIR
 
 ;----------------------
@@ -252,6 +311,7 @@ SnapSearchArea	DW	16384/8		;MAP_ZOOM1
 		DW	16384/64	;MAP_ZOOM4
 		DW	16384/128	;MAP_ZOOM5
 		DW	16384/256	;MAP_ZOOM6
+
 
 ;* temp snap co-ords
 
@@ -432,7 +492,8 @@ WPTEL		DW	0		;secs
 
 ;* >>>>> auto-pilot MFD <<<<<
 
-MFDAttr1	DB	0ffh,000h,0aah,000h,0aah,000h,COL_CRT6,000h	;dull green
+;MFDAttr1	DB	0ffh,000h,0aah,000h,0aah,000h,COL_CRT6,000h	;dull green
+MFDAttr1	DB	0ffh,000h,0aah,000h,0aah,000h,COL_CRT8,000h	;dull green
 
 MFDAttr2	DB	0ffh,000h,0aah,000h,0aah,000h,COL_CRT16,000h	;bright green
 
@@ -658,11 +719,30 @@ UpdateMFD	PROC	NEAR
 		call	CheckTABMap	;moving map selected on any TAB display?
 		jc	SelectNext	;yes ->
 
-@@:		KTEST	KF_MFDSelect
+;@@:		
+	    ;mov	al,Key[K_SHIFT]
+		;and	al,Key[K_D]
+@@:				
+		KTEST	KF_Full_MFD ;Added on 10th April 2018
+		jz Check_MFDSelect
+		KCLEAR KF_Full_MFD
+		cmp bx, MFD_FLIR
+		je  Check_MFDSelect
+		mov bx,MFD_FLIR
+		jmp	SelectSwitch[bx]
+
+Check_MFDSelect:		
+        KTEST	KF_MFDSelect
 		jz	SortMode
-
+		cmp ShiftDwasPressed,1
+        je	SortMode	
 SelectNext:	add	bx,2
-
+        cmp FullScreen,1
+		je JumpOutToHere
+        cmp	bx,MFD_FLIR
+		jne JumpOutToHere
+		add	bx,2
+JumpOutToHere:		
 		jmp	SelectSwitch[bx]
 
 ;* only select moving map if not selected on TAB displays (Nav only)
@@ -694,18 +774,32 @@ SelectAFDS:	cmp	AutoMode,AUTO_OFF	;auto-pilot engaged?
 
 ;* if Pilot then only select FLIR if night or foggy
 
-SelectFLIR:	cmp	si,OFFSET PILOT_MFD	;Pilot's MFD?
-		jne	@F			;no ->
-
-		cmp	Night,0		;night?
-		jne	@F		;yes ->
-
-		cmp	Fog,0		;foggy?
-		je	SelectNext	;no ->
-
-@@:		jmp	SelectModeOk
-
+SelectFLIR:	
+;       cmp	si,OFFSET PILOT_MFD	;Pilot's MFD?
+;		jne	@F			;no ->
+;
+;		
+;		cmp	Night,0		;night?
+;		jne	@F		;yes ->
+;
+;		cmp	Fog,0		;foggy?
+;		je	SelectNext	;no ->
+;
+;@@:		
+        cmp	CrewMode,CREW_PILOT	;pilot?
+		je skippyhere
+		cmp	NAVIG_MFD.MFD_MODE,MFD_FLIR_ORI	;kbs
+		je	SelectNext
+		cmp	TAB1.TAB_MODE,TAB_FLIR	
+		je	SelectNext
+skippyhere:		
+        jmp	SelectModeOk  ;hack frankie
+		
+		call LoadExtrnPan  ;hacked on 5/11/2017 - calls the info bar (8 pixels) to cover remaining space at bottom
+		call UpdateExtrn
+		
 ;* loop back to first MFD mode
+
 
 SelectLoopBack:	mov	bx,-2
 
@@ -919,11 +1013,23 @@ SelectRadarMFD	PROC	FAR
 
 		mov	si,OFFSET PILOT_MFD	;assume pilot
 
+		cmp	TAB2.TAB_MODE,TAB_FLIR
+		je @F
+		jmp Ouches
+@@:		
+		mov	si,OFFSET NAVIG_MFD
+        mov	NAVIG_MFD.MFD_X_ORG,0
+        mov	NAVIG_MFD.MFD_Y_ORG,0       
+		mov	[si].MFD_MODE,MFD_RADAR
+		ret
+Ouches:
 		cmp	CrewMode,CREW_PILOT	;pilot?
 		je	@f
 
 		mov	si,OFFSET NAVIG_MFD
-
+mov	NAVIG_MFD.MFD_X_ORG,0
+mov	NAVIG_MFD.MFD_Y_ORG,0
+        
 @@:		mov	[si].MFD_MODE,MFD_RADAR
 
 		ret
@@ -1177,9 +1283,13 @@ RadarOk:	mov	GMROk,al
 		cmp	DisableInput,0	;input disabled?
 		_JNE	ContGMRMap	;yes ->
 
+		test QuieterCockpit,1 ;in cockpit
+		jnz @F ;->yes
+		jmp JumpOverHereMann
+@@:		
 		test	[si].MFD_HAS_MOUSE,1	;mouse available?
 		_JZ	ContGMRMap		;no ->
-
+JumpOverHereMann:
 		call	ReadMouseMotion
 
 ;* note: al = 1 = lhs button pressed
@@ -1206,7 +1316,7 @@ RadarOk:	mov	GMROk,al
 
 ;* zoom in (decrease range)
 
-GMRDecRange:	cmp	GMRRange,MAP_ZOOM6	;fully zoomed in?
+GMRDecRange:	cmp	GMRRange,MAP_ZOOM6	;fully zoomed in? Hacked by Frankie
 		je	GMRRangeOk		;yes ->
 
 		add	GMRRange,2	;decrease range
@@ -2057,9 +2167,13 @@ AirRadar	PROC	NEAR
 		cmp	DisableInput,0	;input disabled?
 		_JNE	ContAirRadar	;yes ->
 
+		test QuieterCockpit,1 ;in cockpit
+		jnz @F ;->yes
+		jmp LompatOverHereMan
+@@:		
 		test	[si].MFD_HAS_MOUSE,1	;mouse available?
 		_JZ	ContAirRadar		;no ->
-
+LompatOverHereMan:
 		call	ReadMouseMotion
 
 ;* note: al = 1 = lhs button pressed
@@ -2923,31 +3037,99 @@ ILSDisp		ENDP
 ;* kill: assume all
 
 FLIRDisp	PROC	NEAR
-
-		mov	ax,TV1_VIEWMODE	;set viewmode for MFD
+        cmp	si,OFFSET PILOT_MFD	;Pilot's MFD?
+		jne	GoNavMFD			;no ->
+		
+		mov	ax,EXT_VIEWMODE	;set viewmode for MFD
+		cmp IronWork, 1
+		jne SkipMovIronWork0
+		mov	IronWork,0 ;hacked by Frankie 30/11/2017
 		mov	cx,XOrg
 		mov	bl,YOrg
 		call	SetViewMode
-
 		COPY_VP	TMP_VIEW,M_VIEW
-
+		;mov TMP_VIEW.VP_PITCH,0  ;hack frankie
 		add	WORD PTR TMP_VIEW.VP_ZFT_LO,8	;add zft displacement
 		adc	WORD PTR TMP_VIEW.VP_ZFT_HI,0
-
 		call	DrawIRImage
-
 		mov	ax,INT_VIEWMODE		;assume pilot view
-
 		cmp	CrewMode,CREW_PILOT	;pilot?
 		je	@F			;yes ->
-
 		mov	ax,NUL_VIEWMODE		;nav view
+@@:		call	SetViewMode	        
+		
+		cmp	PILOT_MFD.MFD_MODE,MFD_FLIR	;TAB2's FLIR selected?
+        jne BypassEScope2 ;yes ->  		
+		
+        ;call UpdateEScope2
 
-@@:		call	SetViewMode	
+BypassEScope2:
+        call LoadExtrnPan  
+        call UpdateExtrn
+		call RotateHdg		
+        call UpdateHUD2 
+		call UpdateRWR		
+        mov	IronWork,1
+		ret
+		
+SkipMovIronWork0:		
+		mov	cx,XOrg
+		mov	bl,YOrg
+		call	SetViewMode
+		COPY_VP	TMP_VIEW,M_VIEW
+		;mov TMP_VIEW.VP_PITCH,0  ;hack frankie
+		add	WORD PTR TMP_VIEW.VP_ZFT_LO,8	;add zft displacement
+		adc	WORD PTR TMP_VIEW.VP_ZFT_HI,0
+		call	DrawIRImage
+		mov	ax,INT_VIEWMODE		;assume pilot view
+		cmp	CrewMode,CREW_PILOT	;pilot?
+		je	@F			;yes ->
+		mov	ax,NUL_VIEWMODE		;nav view
+@@:		call	SetViewMode	        
+		
+		cmp	PILOT_MFD.MFD_MODE,MFD_FLIR	;TAB2's FLIR selected?
+        jne BypassEScope2b ;yes ->  		
+        ;call UpdateEScope2
 
+BypassEScope2b:
+        call LoadExtrnPan  
+        call UpdateExtrn
+        call UpdateHUD2 
+		call UpdateRWR		
+        ;mov	IronWork,1
+		ret
+
+GoNavMFD:		
+        ;cmp	dx,OFFSET NavigPanel ;kbs
+		;je @F  
+		cmp	TAB1.TAB_MODE,TAB_FLIR	;TAB1 FLIR selected?
+		je	@F			
+		cmp	TAB1.TAB_MODE,TAB_TIALD	;TAB1 TIALD selected?
+		je	@F					
+		mov	ax,TV1_VIEWMODE	;set viewmode for MFD
+		jmp Zebra
+		
+@@:        
+		mov	ax,TV1_VIEWMODE	;set viewmode for MFD
+Zebra:		
+		mov	cx,XOrg
+		mov	bl,YOrg
+		call	SetViewMode
+		COPY_VP	TMP_VIEW,M_VIEW
+		;mov TMP_VIEW.VP_PITCH,0  ;hack frankie
+		add	WORD PTR TMP_VIEW.VP_ZFT_LO,8	;add zft displacement
+		adc	WORD PTR TMP_VIEW.VP_ZFT_HI,0
+		call	DrawIRImage
+		mov	ax,INT_VIEWMODE		;assume pilot view
+		cmp	CrewMode,CREW_PILOT	;pilot?
+		je	@F			;yes ->
+		mov	ax,NUL_VIEWMODE		;nav view
+;@@:		
+        call	SetViewMode	      
 		ret
 
 FLIRDisp	ENDP
+
 
 ;----------------------------------------------------------------------------
 
@@ -2980,19 +3162,28 @@ DrawIRImage	PROC	NEAR
 ;-----------------------------
 
 ;* if night or foggy use IR visual colours
+		;cmp	Night,1		;night level1?
+		;je	SkipIRCols	;yes ->
 
 		cmp	Night,0		;night?
 		jne	@F		;yes ->
 
-		cmp	Fog,0		;foggy?
+		cmp	Fog,0		;foggy
 		je	SkipIRCols	;no ->
 
-@@:		call	SetIRPalette
+@@:		;cmp Night,1
+        ;je SkipIRCols   ;The user had earlier switched NVG on, so do not reset!
 
-		mov	GradEnabled,0
-		mov	StarsEnabled,0
-		mov	CloudsEnabled,0
+;call SetIRPalette ;Safe to reset the NVG to normal colors
+;call CheckForNVG
+		;mov	GradEnabled,0
+		;mov	StarsEnabled,0
+		;mov	CloudsEnabled,0
+;mov	GradEnabled,1   ;hack by Frankie 30/11/17
+;mov	StarsEnabled,0  ;hack by Frankie 30/11/17
+;mov	CloudsEnabled,0 ;hack by Frankie 30/11/17
 
+		
 SkipIRCols:	mov	HillTextEnabled,0
 
 ;* sector scan = max(sector scan, 7 * 7)
@@ -3034,9 +3225,14 @@ SkipIRCols:	mov	HillTextEnabled,0
 		cmp	Fog,0		;foggy?
 		je	SkipFixCols	;no ->
 
-@@:		call	FixIRPalette
-
-SkipFixCols:	ret
+@@:		;cmp Night,1
+        ;je SkipFixCols   ;The user had earlier switched NVG on, so do not reset!
+;call FixIRPalette ;Safe to reset the NVG to normal colors
+;call CheckForUNNVG
+SkipFixCols:	
+        mov	ax,NUL_VIEWMODE ;does this have any effect?
+		call	SetViewMode	;does this have any effect?
+        ret
 
 DrawIRImage	ENDP
 
@@ -3104,6 +3300,43 @@ NextDamage:	pop	si
 
 DamagedDisp	ENDP
 
+
+;----------------------------------------------------------------------------
+
+;* DamagedDispMFD
+;*
+;* pass: si -> MFD data block
+;* ret : nothing
+;* kill: assume all
+
+DamagedDispMFD	PROC	NEAR
+
+		call	ClearDisp
+
+		mov	cx,24
+DamagedLoop2:	push	cx
+		push	si
+
+		call	RandX
+		and	al,03fh
+		cmp	al,MFD_DEPTH
+		jae	NextDamage2
+
+		add	al,MFD_Y_ORG[si]
+		mov	bl,al
+		mov	cx,MFD_X_ORG[si]
+		mov	dx,cx
+		add	dx,MFD_WIDTH-1
+		mov	al,COL_CRT6
+		call	HLineDraw
+
+NextDamage2:	pop	si
+		pop	cx
+		loop	DamagedLoop2
+		
+		ret
+
+DamagedDispMFD	ENDP
 ;----------------------------------------------------------------------------
 
 ;* InvalidDisp - draw large 'X' in centre of MFD display
@@ -3180,7 +3413,147 @@ SkipZoomOut:	ret
 
 UpdateMapZoom	ENDP
 
+   
+;CheckForNVG	PROC	NEAR
+;        KTEST   KF_NVG_MFD
+;        _JZ GoHere2
+;		cmp	Night,0	;day?
+;		je GoHere2 ;yes ->
+;		call	SetIRPalette
+;		mov	GradEnabled,0
+;		mov StarsEnabled,0
+;		mov CloudsEnabled,0
+;   GoHere2: ret
+;CheckForNVG ENDP
+
+;CheckForUNNVG	PROC	NEAR
+;        KTEST   KF_NONVG_MFD
+;        _JZ GoHere1
+;		call	FixIRPalette
+;		mov	GradEnabled,1
+;		mov StarsEnabled,1
+;		mov CloudsEnabled,1
+;   GoHere1: ret
+;CheckForUNNVG ENDP
+  
+  
+;----------------------------------------------------------------------------
+
+;* FLIRDisp - forward looking infra-red display
+;*
+;* pass: si -> MFD data block
+;* ret : nothing
+;* kill: assume all
+
+FLIRDisp_ori	PROC	NEAR
+
+		mov	ax,TV1_VIEWMODE	;set viewmode for MFD
+		mov	cx,XOrg
+		mov	bl,YOrg
+		call	SetViewMode
+
+		COPY_VP	TMP_VIEW,M_VIEW
+
+		add	WORD PTR TMP_VIEW.VP_ZFT_LO,8	;add zft displacement
+		adc	WORD PTR TMP_VIEW.VP_ZFT_HI,0
+
+		call	DrawIRImage
+
+		mov	ax,INT_VIEWMODE		;assume pilot view
+
+		cmp	CrewMode,CREW_PILOT	;pilot?
+		je	@F			;yes ->
+
+		mov	ax,NUL_VIEWMODE		;nav view
+
+@@:		call	SetViewMode	
+
+		ret
+
+FLIRDisp_ori	ENDP
+  
+;----------------------------------------------------------------------------
+
+;* RotateHdg - rotate camera heading
+;*
+;* pass: cx, bx = current heading (*65536 scaling)
+;* ret : cx, bx = new heading
+;* kill: ax, dx, flags
+
+RotateHdg	PROC	NEAR
+
+;* sort rotate right
+
+		KTEST	KF_TrackAClk
+		jz	SkipRotateRt
+
+		mov	ax,32*256	;32 pdeg / sec track (*256 scaling)
+		mov	dx,DeltaTime
+		imul	dx
+		FRACADJ	ax
+
+		xor	dh,dh		;*256 = *65536 scaling
+		mov	dl,ah
+		mov	ah,al
+		xor	al,al
+
+;* fast rotate?
+
+		test	BYTE PTR KF_FastTrkAClk[K_STATUS],1
+		jz	@F
+
+		REPT	2		;*4
+		shl	ax,1
+		rcl	dx,1
+		ENDM
+
+@@:		sub	bx,ax
+		sbb	cx,dx
+		and	cx,511
+
+		jmp	SkipRotateLt
+		
+;* sort rotate left
+
+SkipRotateRt:	KTEST	KF_TrackClk
+		jz	SkipRotateLt
+
+		mov	ax,32*256	;32 pdeg / sec track (*256 scaling)
+		mov	dx,DeltaTime
+		imul	dx
+		FRACADJ	ax
+
+		xor	dh,dh		;*256 = *65536 scaling
+		mov	dl,ah
+		mov	ah,al
+		xor	al,al
+
+;* fast rotate?
+
+		test	BYTE PTR KF_FastTrkClk[K_STATUS],1
+		jz	@F
+
+		REPT	2		;*4
+		shl	ax,1
+		rcl	dx,1
+		ENDM
+
+@@:		add	bx,ax
+		adc	cx,dx
+		and	cx,511
+
+SkipRotateLt:	ret
+
+RotateHdg	ENDP    
+  
+  
+  
 PANCODE		ENDS
+
+
+
+
+
 
 ;============================================================================
 

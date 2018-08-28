@@ -239,6 +239,7 @@ COL_SIGHT	EQU	141
 ;* TIALD symbology
 
 COL_TIALD_SYM	EQU	COL_BLACK
+;COL_TIALD_SYM	EQU	COL_WHITE
 
 ;* moving map symbology
 

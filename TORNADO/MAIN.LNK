@@ -91,6 +91,7 @@ extrnpan+
 framepan+
 lookdown+
 hud+
+hud2+
 views+
 uservis+
 avionics+
@@ -128,4 +129,3 @@ flight\flight
 
 
 
-

@@ -1,3 +1,5 @@
+;Very useful regex	
+;(?i)(?:\b(WPN_VIEW)\b)[^\w\r\n]+(?:\w+[^\w\r\n]+){0,5}?\b(VIEWPOINT)\b.*
 ;****************************************************************************
 ;*
 ;* WEAPONS.ASM
@@ -77,8 +79,14 @@
 		PUBLIC	SAM_MIN_SPEED
 		PUBLIC	SAM_MAX_SPEED
 		PUBLIC	JP233_BOMBLETS
-		PUBLIC	JP233_PERIOD	
-
+		PUBLIC	JP233_PERIOD
+EXTRN	FuelWt:WORD		
+EXTRN	GameViewMode:WORD		
+EXTRN	MusicCard:WORD		
+EXTRN	CrewMode:WORD		
+EXTRN InstallMusic:FAR
+EXTRN	MorseDashSound:FAR
+EXTRN   CockpitViews:BYTE
 		EXTRN	MakeCrater:FAR
 		EXTRN	MakeSmokeEffect:FAR
 		EXTRN	ExploSound1:FAR
@@ -211,8 +219,9 @@
 		EXTRN	M_MOBILE:MOBILE
 
 		EXTRN	M_VIEW:VIEWPOINT
+		EXTRN	V_VIEW:VIEWPOINT
 		EXTRN	TMP_VIEW:VIEWPOINT
-
+	
 		EXTRN	FloatWP:WAYPOINT
 
 		EXTRN	Packages:PACKAGE
@@ -236,7 +245,9 @@
 
 ;============================================================================
 
+
 DATA		SEGMENT PARA PUBLIC 'DATA'
+
 
 ;------------------------
 ;* air-to-gnd weapon vars (Tornado only)
@@ -323,7 +334,7 @@ WPN_Workspace	LABEL	BYTE
 
 WPN_Mobile	MOBILE <>
 WPN_View	VIEWPOINT <>
-WPN_Weapon	WEAPON <>
+WPN_Weapon	WEAPON <16,16,0,0,5000,0,0,0>
 
 ;------------------------------------------
 ;* look up external stores index wrt weapon (-1 = not external)
@@ -684,7 +695,7 @@ ObjectNum	DB	MOB_BOMB	;GPB1000
 		DB	MOB_ALARM	;GECKO
 		DB	MOB_CHAFF	;CHAFF
 		DB	MOB_FLARE	;FLARE
-
+		DB	MOB_TRACERB	;CANNON (RED)
 		EVEN
 
 ;----------------------
@@ -823,7 +834,7 @@ WeaponEffect	DB	WPN_EFFECT4	;GPB1000
 		DB	WPN_EFFECT1	;SIDEWINDER
 		DB	WPN_EFFECT1	;SKYFLASH
 		DB	WPN_EFFECT3	;PATRIOT
-		DB	WPN_EFFECT3	;GECKO
+		DB	WPN_EFFECT3	;GECKO  used to be WPN_EFFECT3 --> now changed to WPN_EFFECT2
 		DB	WPN_EFFECT1	;CHAFF
 		DB	WPN_EFFECT1	;FLARE
 
@@ -844,6 +855,7 @@ WeaponRadius	DW	300		;GPB1000
 		DW	20		;SKYFLASH
 		DW	20		;PATRIOT
 		DW	20		;GECKO
+		;DW	10		;GECKO
 		DW	0		;CHAFF
 		DW	0		;FLARE
 
@@ -3595,7 +3607,10 @@ AlarmImpact	LABEL	NEAR
 
 ;* restore zft
 
-AlarmHitGnd: 	sub	WPN_Weapon.WPN_ZFINE,bx
+AlarmHitGnd: 	
+        ;SHAKE	SHAKE_DAMAGE,HSHAKE_HI,VSHAKE_HI,50  ;Frankie 6th May 2018	
+		
+        sub	WPN_Weapon.WPN_ZFINE,bx
 		sbb	WORD PTR WPN_View.VP_ZFT_LO,cx
 		sbb	WORD PTR WPN_View.VP_ZFT_HI,dx
 
@@ -3750,7 +3765,7 @@ AerialActivity	LABEL	NEAR
 
 		mov	RadarFlag,0
 
-;* set max range to zft (therefore ñ45ø scan pyramid)
+;* set max range to zft (therefore ?5?scan pyramid)
 
 		mov	ax,WORD PTR WPN_View.VP_ZFT_LO
 		mov	dx,WORD PTR WPN_View.VP_ZFT_HI
@@ -4717,8 +4732,10 @@ ContMissMove:	mov	bx,WPN_View.VP_HDG
 
 ;* inform target that missile is locked and close
 
-		call	SetDroneWpnLock
-
+		call	MorseDashSound 
+		call	SetDroneWpnLock 
+        
+		
 ;* calc range (flat) and bearing of intercept point
 
 		mov	si,OFFSET WPN_View
@@ -5183,7 +5200,7 @@ WpnHitTarget	PROC	NEAR
 ;* calc Tornado range to explosion (sound effect, destroyed, damaged)
 ;---------------------------------
 
-@@:		mov	si,OFFSET M_VIEW
+@@:		mov	si,OFFSET M_VIEW            ;save this line! Try to change M_VIEW to REM_VIEW and to SPEC_VIEW
 
 		push	di
 		call	CalcSlantRange
@@ -5195,7 +5212,7 @@ WpnHitTarget	PROC	NEAR
 		cmp	ax,250		;within damage radius?
 		ja	@F		;no ->
 
-		SHAKE	SHAKE_DAMAGE,HSHAKE_HI,VSHAKE_HI,50
+		SHAKE	SHAKE_DAMAGE,HSHAKE_HI,VSHAKE_HI,50 ;ori
 
 		test	NoCollisions,1	;no collisions enabled?
 		jnz	@F		;yes ->
@@ -5211,7 +5228,7 @@ WpnHitTarget	PROC	NEAR
 
 		push	ax
 		push	di
-		DESTROY	DIE_AIR_EXPLO,TOTAL_DAMAGE
+		DESTROY	DIE_AIR_EXPLO,TOTAL_DAMAGE ;perhaps this code is key
 		pop	di
 		pop	ax
 
@@ -5221,9 +5238,9 @@ WpnHitTarget	PROC	NEAR
 ;-------------------
 ;* make sound effect
 ;-------------------
-
+ 
 WpnHitSound:	push	di
-		call	ExploSound3
+		SHAKE	SHAKE_DAMAGE,HSHAKE_HI,VSHAKE_HI,50 ;added in for extra measure - frankie kam hack (31/12/17)
 		pop	di
 
 ;-------------------
@@ -5362,7 +5379,7 @@ WeaponsControl	PROC	FAR
 
 		mov	CannonFired,0
 
-		UNSHAKE SHAKE_CANNON
+		UNSHAKE SHAKE_CANNON ;ori
 
 ;* assume no IR lock
 
@@ -6215,7 +6232,7 @@ ArmJP233     	LABEL	NEAR
 
 		mov	JP233Timer,JP233_PERIOD
 
-		SHAKE	SHAKE_JP233,HSHAKE_LO,VSHAKE_LO,JP233_PERIOD
+		SHAKE	SHAKE_JP233,HSHAKE_LO,VSHAKE_LO,JP233_PERIOD ;ori
 
 		jmp	SkipJP233
 
@@ -6288,7 +6305,7 @@ ArmAlarmDir 	LABEL	NEAR
 		mov	cx,NumRWRThreats
 		_JCXZ	SkipAlarmDir	;no threats ->
 
-;* scan RWR threats for threat nearest top dead centre (but within ñ45degs)
+;* scan RWR threats for threat nearest top dead centre (but within ?5degs)
 
 		xor	bp,bp		;index = 0
 
@@ -6574,7 +6591,7 @@ ContCannon:	KFETCH	KF_WpnCommit
 
 		call	CannonSound
 
-		SHAKE	SHAKE_CANNON,HSHAKE_OFF,VSHAKE_LO,1*100
+		SHAKE	SHAKE_CANNON,HSHAKE_OFF,VSHAKE_LO,1*100 ;ori
 
 		mov	dh,RHS_CANNON
 
@@ -7821,6 +7838,7 @@ FireCannon	PROC	NEAR
 
 ;* vel = min(vtas + muzzle velocity, 32767)
 
+		mov WeaponVel,0
 		mov	bp,WeaponVel
 		add	bp,MUZZLE_VELOCITY
 
@@ -8149,7 +8167,9 @@ ReleaseDecoy	PROC	NEAR
 		test	InCockpit,1
 		jz	@F
 
-		add	WORD PTR WPN_View.VP_ZFT_LO,ZFT_COCKPIT
+		add	WORD PTR WPN_View.VP_ZFT_LO,ZFT_COCKPIT-4
+		add	WORD PTR WPN_View.VP_XFT,ZFT_COCKPIT
+		add	WORD PTR WPN_View.VP_YFT,ZFT_COCKPIT
 		adc	WORD PTR WPN_View.VP_ZFT_HI,0
 
 @@:		call	CalcDecoyPos
@@ -8992,9 +9012,9 @@ SortAirborne: 	cmp	WORD PTR _VP_ZFT_LO[si],1000
 
 		cmp	si,OFFSET M_MOBILE
 		jne	@F
-
-		SHAKE	SHAKE_DAMAGE,HSHAKE_HI,VSHAKE_HI,50
-
+		
+		;SHAKE	SHAKE_DAMAGE,HSHAKE_HI,VSHAKE_HI,50 ;ori
+		
 @@:		push	si
 		call	WpnKillDrone	
 		pop	si
@@ -9008,15 +9028,29 @@ SortAirborne: 	cmp	WORD PTR _VP_ZFT_LO[si],1000
 ;* if Tornado then check if within damage zone
 
 SkipMobKill:	cmp	si,OFFSET M_MOBILE
-		jne	NextMobile
-
-		cmp	ax,WeaponHemi[bx]
-		jae	NextMobile
-
+		jne	SpecialEffectsBeforeNextMobile
+		
+        ;mov	MusicCard,SND_SBLASTER
+        ;call InstallMusic
+		
+		
+;		cmp	ax,WeaponHemi[bx]		
+;		jae	NextMobile                    
+		
 ;* damage Tornado
 
-		SHAKE	SHAKE_DAMAGE,HSHAKE_HI,VSHAKE_HI,50
+;		SHAKE	SHAKE_DAMAGE,HSHAKE_HI,VSHAKE_HI,50 ;ori
 
+        ; If the logic flow reaches here, then the Tonka is out of the DamageHemisphere 
+		; but we still want a little jolt/vibration to with the sound effects of 
+		; the bomb detonating!
+		mov dx,WeaponHemi[bx]	;Added on 30/6/2018. Now LGBs hit the ground with a jarring shaking effect
+		shr dx,1                ;Added on 30/6/2018. Now LGBs hit the ground with a jarring shaking effect
+		cmp	ax,dx               ;Added on 30/6/2018. Now LGBs hit the ground with a jarring shaking effect
+		jae	@F
+;* damage Tornado		
+		;SHAKE	SHAKE_DAMAGE,HSHAKE_HI,VSHAKE_HI,50 ;ori
+		
 		mov	bx,SMOKE_AIR_EXPLO
 		mov	si,OFFSET M_VIEW
 		call	MakeSmokeEffect		
@@ -9025,11 +9059,45 @@ SkipMobKill:	cmp	si,OFFSET M_MOBILE
 		jnz	NextMobile
 
 		call	MaxDamage
-
-NextMobile:	pop	si
-
+		
+		jmp NextMobile
+@@:		
+		cmp ax, 1320 ;1,320 feet = 1/4 mile
+		jae @F ;--> if the distance of Tornado from the blast is less than a quarter mile then...
+        SHAKE	SHAKE_COLLIDE,HSHAKE_LO,VSHAKE_HI,50   ;... add MAJOR shake/vibration (hack),
+		jmp NextMobile
+@@:		; <-- else jump here!
+		cmp ax, 2640 ;2,640 feet = 1/2 mile
+		jae @F ;--> if the distance of Tornado from the blast is less than a half mile then...
+        SHAKE	SHAKE_COLLIDE,HSHAKE_HI,VSHAKE_LO,50   ;... add MEDIUM shake/vibration (hack),
+		jmp NextMobile 
+@@:		; <-- else jump here!
+		cmp ax, 5280 ;5,280 feet = 1 mile
+		jae NextMobile ;--> if the distance of Tornado from the blast is less than a mile then...
+		SHAKE	SHAKE_BRAKE,HSHAKE_LO,VSHAKE_LO,65535 ;add SLIGHT shake/vibration (hack)
+        jmp NextMobile 
+		
+SpecialEffectsBeforeNextMobile:
+		test	WPN_Weapon.WPN_FLAGS,WFLG_TORNADO
+		jz	@F
+		test	InCockpit,1
+		jz	@F
+		jmp NextMobile
+@@:		
+        test CockpitViews,1
+		jnz @F
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+        cmp	GameViewMode,VIEW_DRONE
+        jne @F
+		test	WPN_Weapon.WPN_FLAGS,WFLG_TORNADO
+		jnz	@F
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;		
+		call ExploSound2
+        SHAKE	SHAKE_DAMAGE,HSHAKE_HI,VSHAKE_HI,50
+@@:		
+NextMobile:	
+        pop	si
 		mov	si,[si].MOB_LINK_PTR
-
 		jmp	MobileLoop
 
 KillMobExit:	ret
@@ -9263,7 +9331,7 @@ CreateExplosion	PROC	NEAR
 ;-------------
 ;* sort effect
 ;-------------
-
+        ;SHAKE	SHAKE_BRAKE,HSHAKE_HI,VSHAKE_HI,50		
 		and	al,DAM_EXPLO_MASK
 
 ;* DAM_EXPLO1 = burn only
@@ -9354,7 +9422,7 @@ ExploLoop: 	push	cx
 ContBurn:	mov	bx,SMOKE_BURNING
 		mov	si,OFFSET TMP_VIEW
 		call	MakeSmokeEffect
-
+;SHAKE	SHAKE_BRAKE,HSHAKE_HI,VSHAKE_HI,50
 		ret
 
 CreateExplosion	ENDP
@@ -9596,9 +9664,17 @@ CalcDecoyPos	ENDP
 
 CheckIRLock	PROC	NEAR
 
+;--------------------------------
+;* check for zero fuel - gliding?
+;--------------------------------
+
+;* no lock if out of fuel
+		cmp	FuelWt,0	;out of fuel?
+		je	NoLock		;yes ->
+
 ;---------------
 ;* check for fog
-;---------------
+;---------------		
 
 		cmp	Fog,0
 		je	@F

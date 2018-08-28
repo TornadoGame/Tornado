@@ -37,7 +37,7 @@
 ;*    support.
 ;*
 ;* Waypoint Components
-;* ÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄ
+;* ÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄ?
 ;*
 ;*    WP_ID	: waypoint identifier (ASCII character)
 ;*
@@ -79,7 +79,7 @@
 ;*    WP_PACKAGE: weapons package to deliver at waypoint
 ;*
 ;* Waypoint Attributes
-;* ÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄ
+;* ÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄ?
 ;*		
 ;*    WP_TYPE	: 1 = target (fly over waypoint)
 ;*		  0 = turning point (turn early)
@@ -176,7 +176,7 @@
 ;*                in the waypoint route.
 ;*
 ;* Waypoint Distance
-;* ÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄ
+;* ÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄ?
 ;*
 ;*    Waypoints should not be placed too close together. The aircraft or
 ;*    helicoter may have difficulty turning onto the waypoint (especially
@@ -197,8 +197,12 @@ DRONE_HC_ON	EQU	1		;1 = drone helicopters enabled
 ;--------------------
 ;* miscellaneous data
 ;--------------------
-
+;PUBLIC NightVisionState 
+        PUBLIC  ShakeUp
+        PUBLIC  FullScreen		
 		PUBLIC	TMP_VIEW
+PUBLIC TornadoType		
+PUBLIC	TMP2_VIEW		
 		PUBLIC	GameViewMode
 		PUBLIC	PanelMode
 		PUBLIC	CrewMode
@@ -224,7 +228,6 @@ DRONE_HC_ON	EQU	1		;1 = drone helicopters enabled
 		PUBLIC	ShakePriority
 		PUBLIC	TmpDieFlag
 		PUBLIC	Jettison
-
 		PUBLIC	DronePtrs
 		PUBLIC	AAirDronePtrs
 		PUBLIC	AAirDroneLast
@@ -379,7 +382,7 @@ DRONE_HC_ON	EQU	1		;1 = drone helicopters enabled
 		PUBLIC	_StarsEnabled
 		PUBLIC	_GradEnabled
 		PUBLIC	_Overcast
-		PUBLIC	_Fog
+		PUBLIC  _Fog
 		PUBLIC	_Night
 		PUBLIC	_PanelLight
 		PUBLIC	_CHStick
@@ -418,7 +421,7 @@ DATA		SEGMENT PARA PUBLIC 'DATA'
 ;--------------------
 
 TMP_VIEW	VIEWPOINT <>		;see VISDATA.INC
-
+TMP2_VIEW	VIEWPOINT <>		;see VISDATA.INC
 		EVEN
 
 GameViewMode	DW	VIEW_PILOT	;see MAINDATA.INC
@@ -439,6 +442,9 @@ WayTotal  	DW	0		;num valid waypoints (always > 0)
 
 ArmMode		DW	ARM_OFF		;see MAINDATA.INC
 
+ShakeUp    DB 0  ;SHAKE Effects
+
+FullScreen DB 1
 ;-------------------
 ;* waypoint pointers
 ;-------------------
@@ -749,6 +755,8 @@ InfiniteGForce	DB	0		;1 = no blackouts or redouts
 
 IronWork	DB	1		;1 = shown, 0 = hidden
 
+;NightVisionState DB 0 ;1 = NVG is on, 0 = off
+
 TwoPlayer	DB	0		;1 = two player mode enabled
 
 CommsDevice	DB	COM2		;see COMMS.ASM
@@ -832,9 +840,32 @@ ExtStores	DW	0		;EXT_GPB1000
 
 Packages	LABEL	PACKAGE
 
-		PACKAGE	<'-',   ALARM, 4, ARM_ALARM_DIR>
-		PACKAGE	<'-', LGB1000, 1, ARM_LGB>
-		PACKAGE	<'-',   JP233, 1, ARM_JP233>
+		;Available ordnance:
+		;GPB1000  RET1000 LGB1000 BL755 JP233  ALARM BOZ100 SKYSHADOW
+
+		;Available arming modes:
+        ;ARM_OFF		= off
+        ;ARM_MANUAL	= manual bombing
+        ;ARM_LAYDOWN	= laydown bombing
+        ;ARM_LOFT	= loft bombing
+        ;ARM_LGB		= laser guided bomb
+        ;ARM_JP233	= JP233
+        ;ARM_ALARM_DIR = ;ALARM (direct attack mode)
+        ;ARM_ALARM_IND = ALARM (indirect attack mode)
+        ;ARM_CANNON = cannon
+        ;ARM_SIDEWINDER = Sidewinder
+        ;ARM_SKYFLASH = Skyflas
+
+		;Previously the default IDS package was:
+		;PACKAGE	<'-',   ALARM, 4, ARM_ALARM_DIR>
+		;PACKAGE	<'-', LGB1000, 1, ARM_LGB>
+		;PACKAGE	<'-', GPB1000, 4, ARM_MANUAL>
+		;PACKAGE	<'-',   JP233, 1, ARM_JP233>
+		
+		;Now the default IDS package is:
+		PACKAGE	<'-', LGB1000, 4, ARM_LGB>
+		PACKAGE	<'-', RET1000, 2, ARM_MANUAL>
+		PACKAGE	<'-',   BL755, 2, ARM_MANUAL>
 
 		EVEN
 
@@ -2719,4 +2750,3 @@ DATA		ENDS
 
 		END
 
-

@@ -80,7 +80,7 @@
 		PUBLIC	ExtraPanel
 
 		PUBLIC	PanelLoad
-
+EXTRN	IronWork:BYTE
 		EXTRN	UpdatePilot:NEAR
 		EXTRN	UpdateNavig:NEAR
 		EXTRN	UpdateExtrn:NEAR
@@ -127,105 +127,104 @@ ExtraPanel	DB	"EXTRAPAN.BT2",0
 ;* initialize panels switch (wrt ScreenMode)
 ;--------------------------
 
-_InitPanels	DW	Null		;HGC
+_InitPanels	DW	VGA_InitPanels	;VGA
 		DW	Null		;HEM
 		DW	Null		;CGA
 		DW	Null		;EGA
 		DW	Null		;TAN
 		DW	Null		;TEM
 		DW	Null		;V16
-		DW	VGA_InitPanels	;VGA
+		
 
 ;-------------------
 ;* load panel switch (wrt ScreenMode)
 ;-------------------
 
-_LoadPanel	DW	Null		;HGC
+_LoadPanel	DW	VGA_LoadPanel	;VGA
 		DW	Null		;HEM
 		DW	Null		;CGA
 		DW	Null		;EGA
 		DW	Null		;TAN
 		DW	Null		;TEM
 		DW	Null		;V16
-		DW	VGA_LoadPanel	;VGA
+		
 
 ;--------------------------
 ;* clear pilot panel switch (wrt ScreenMode)
 ;--------------------------
 
-_ClrPilotPanel	DW	Null		;HGC
+_ClrPilotPanel	DW	VGA_ClrPilotPan	;VGA
 		DW	Null		;HEM
 		DW	Null		;CGA
 		DW	Null		;EGA
 		DW	Null		;TAN
 		DW	Null		;TEM
 		DW	Null		;V16
-		DW	VGA_ClrPilotPan	;VGA
+		
 
 ;--------------------------
 ;* clear navig panel switch (wrt ScreenMode)
 ;--------------------------
 
-_ClrNavigPanel	DW	Null		;HGC
+_ClrNavigPanel	DW	VGA_ClrNavigPan	;VGA
 		DW	Null		;HEM
 		DW	Null		;CGA
 		DW	Null		;EGA
 		DW	Null		;TAN
 		DW	Null		;TEM
 		DW	Null		;V16
-		DW	VGA_ClrNavigPan	;VGA
+		
 
 ;---------------------------------
 ;* draw pilot panel sprites switch (wrt ScreenMode)
 ;---------------------------------
 
-_DrawPilotPanel	DW	Null		;HGC
+_DrawPilotPanel	DW	VGA_DrwPilotPan	;VGA
 		DW	Null		;HEM
 		DW	Null		;CGA
 		DW	Null		;EGA
 		DW	Null		;TAN
 		DW	Null		;TEM
 		DW	Null		;V16
-		DW	VGA_DrwPilotPan	;VGA
+		
 
 ;---------------------------------
 ;* draw navig panel sprites switch (wrt ScreenMode)
 ;---------------------------------
 
-_DrawNavigPanel	DW	Null		;HGC
+_DrawNavigPanel	DW	VGA_DrwNavigPan	;VGA
 		DW	Null		;HEM
 		DW	Null		;CGA
 		DW	Null		;EGA
 		DW	Null		;TAN
 		DW	Null		;TEM
 		DW	Null		;V16
-		DW	VGA_DrwNavigPan	;VGA
 
 ;----------------------------
 ;* draw ironwork panel switch (wrt ScreenMode)
 ;----------------------------
 
-_DrawIronWork	DW	Null		;HGC
+_DrawIronWork	DW	VGA_IronWork	;VGA
 		DW	Null		;HEM
 		DW	Null		;CGA
 		DW	Null		;EGA
 		DW	Null		;TAN
 		DW	Null		;TEM
 		DW	Null		;V16
-		DW	VGA_IronWork	;VGA
+		
 
 ;--------------------------
 ;* draw HUD brackets switch (wrt ScreenMode)
 ;--------------------------
 
-_DrawBrackets	DW	Null		;HGC
+_DrawBrackets	DW	VGA_Brackets	;VGA
 		DW	Null		;HEM
 		DW	Null		;CGA
 		DW	Null		;EGA
 		DW	Null		;TAN
 		DW	Null		;TEM
 		DW	Null		;V16
-		DW	VGA_Brackets	;VGA
+		
 
 ;------------------
 ;* panel load count (wrt ScreenMode)
@@ -236,15 +235,14 @@ _DrawBrackets	DW	Null		;HGC
 
 PanelLoad	DB	0,0		;panel load count
 
-CountLoad	DB	1		;HGC
+CountLoad	DB	2		;VGA
 		DB	1		;HEM
 		DB	1		;CGA
 		DB	2		;EGA
 		DB	1		;TAN
 		DB	1		;TEM
 		DB	2		;V16
-		DB	2		;VGA
-
+		
 		EVEN
 
 ;---------------------
@@ -301,10 +299,11 @@ SetPanelMode	ENDP
 ;*       data stored in WorkScreen[] or CopyScreen[] will be destroyed.
 
 InitPanels	PROC	FAR
-
+		test	IronWork,1	;ironwork enabled?
+		jz	@F		;no ->
 		mov	bx,ScreenMode
 		call	_InitPanels[bx]
-
+;@@:	
 		ret
 
 InitPanels	ENDP

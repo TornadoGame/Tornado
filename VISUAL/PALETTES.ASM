@@ -25,7 +25,6 @@
 		PUBLIC	InitPalettes
 		PUBLIC	SwapPalettes
 		PUBLIC	SetHUDLevel
-
 		PUBLIC	HGC_Palette1
 		PUBLIC	CGA_Palette1
 		PUBLIC	TAN_Palette1
@@ -535,10 +534,11 @@ VGA_Panel2	LABEL	BYTE
 
 ;* HUD colours
 
-VGA_HUD_COLS 	DB	009h,03ah,011h	;(should match VGA_HUD)
+VGA_HUD_COLS DB	009h,03ah,011h	;(should match VGA_HUD)
 		DB	006h,02ah,00ch
 		DB	003h,01bh,007h
 		DB	001h,00ch,003h
+		;DB	0ffh,0ffh,0ffh  Don't know how to add a 5th color
 
 ;* ground below clouds
 
@@ -936,7 +936,7 @@ SkipPreview:	mov	ax,PALDATA
 
 IRLoop:		lodsb			;R
 		mov	ah,al		;R * 256
-		xor	al,al
+		;xor	al,al
 		mov	dx,9830		;0.3 = 9830 / 32768
 		imul	dx		;R * 256 * 0.3
 
@@ -971,6 +971,7 @@ IRLoop:		lodsb			;R
 		shr	dh,1		;0 .. 15
 		ENDM
 
+		;mov	al,COL_CRT1
 		mov	al,COL_CRT1
 		add	al,dh
 
@@ -987,6 +988,42 @@ IRLoop:		lodsb			;R
 		mov	VGA_INFRA_RED[COL_RWY1-IR_COL_START],COL_CRT5
 		mov	VGA_INFRA_RED[COL_RAIL1-IR_COL_START],COL_CRT5
 		mov	VGA_INFRA_RED[COL_RAIL2-IR_COL_START],COL_CRT4
+		
+		;Adjust stars colours when in NVG (IR) colours
+		mov	VGA_INFRA_RED[COL_NT_GREY2-IR_COL_START],COL_CRT16
+		mov	VGA_INFRA_RED[COL_NT_GREY3-IR_COL_START],COL_CRT13 ;14
+		mov	VGA_INFRA_RED[COL_NT_GREY4-IR_COL_START],COL_CRT10 ;12
+		mov	VGA_INFRA_RED[COL_NT_GREY1-IR_COL_START],COL_CRT7 ;11
+		
+		;Adjust LGB1000 colours when in NVG (IR) colours
+		mov VGA_INFRA_RED[COL_GREY4-IR_COL_START],COL_CRT5
+
+		;Adjust Tornado colours when in NVG (IR) colours
+		mov	VGA_INFRA_RED[COL_OLIVE4-IR_COL_START],COL_CRT6
+                mov     VGA_INFRA_RED[COL_OLIVE3-IR_COL_START],COL_CRT4
+		mov	VGA_INFRA_RED[COL_DK_CYAN1-IR_COL_START],COL_CRT6
+		mov	VGA_INFRA_RED[COL_DK_CYAN3-IR_COL_START],COL_CRT8
+		mov	VGA_INFRA_RED[COL_OLIVE2-IR_COL_START],COL_CRT5
+			
+		;Adjust runaway (tarmac) colours when in NVG (IR) colours
+		mov	VGA_INFRA_RED[COL_RWY1-IR_COL_START],COL_CRT4
+
+		;Adjust upper sky when in NVG (IR) colours
+		mov	VGA_INFRA_RED[COL_SKY12-IR_COL_START],COL_CRT6
+
+		;Adjust cloud colours
+		mov	VGA_INFRA_RED[COL_NEAR_WHITE1-IR_COL_START],COL_CRT11
+		mov	VGA_INFRA_RED[COL_NEW_GREY1-IR_COL_START],COL_CRT8
+		
+		;Adjust ADV Tornado (from too bright gray to darker shade of NVG)
+		mov	VGA_INFRA_RED[COL_CYAN_GREY1-IR_COL_START],COL_CRT9
+		
+		
+		
+
+
+
+		
 
 		ASSUME	DS:DATA
 
@@ -1284,4 +1321,3 @@ VISCODE		ENDS
 
 		END
 
-

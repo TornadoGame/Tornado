@@ -28,12 +28,13 @@
 
 		PUBLIC	DrawRunways
 		PUBLIC	DrawTaxiways
-
+EXTRN	ModelMapIndex:WORD		
+EXTRN	SctrGameLayer1:BYTE
+EXTRN   ILSRangeHi:WORD
 		EXTRN	PolyFill:FAR
 		EXTRN	LineDraw:FAR
 		EXTRN	PolyLine:FAR
 		EXTRN	SetPixel:FAR
-
 		EXTRN	CalcOutCodes:NEAR
 		EXTRN	PolyClip:NEAR
 		EXTRN	QuickLineClip:NEAR
@@ -302,7 +303,17 @@ CheckNS:	mov	ax,XSecScan
 		cmp	ax,3
 		ja	LightsOk
 
-LightsOn:	mov	RwyLightsOn,1	;lights on
+;LightsOn:	mov	RwyLightsOn,1	;lights on
+LightsOn:	
+		mov	bp,ModelMapIndex
+		test	SctrGameLayer1[bp],10000000b  ;SECT_ENEMY. Over enemy sector?
+        jz @F; --> No! 
+		mov	RwyLightsOn,0 ;lights off!
+		jmp SkipRwyLightsOn
+@@: 
+        mov	RwyLightsOn,1	;lights on = 1, The airfield is a friendly. 
+		                    ;Show all lights. Assume that at the last minute, they were switched on for me to land!
+SkipRwyLightsOn:
 
 LightsOk:	push	si
 
@@ -2037,8 +2048,18 @@ DrawTaxiways	ENDP
 
 ScanVertex1	PROC	NEAR
 
-		mov	RwyLightCol,COL_NT_BLUE1
-
+	    ;mov	RwyLightCol,COL_NT_BLUE1
+		
+		mov	bp,ModelMapIndex
+		test	SctrGameLayer1[bp],10000000b  ;SECT_ENEMY. Over enemy sector?
+        jz @F; --> No! 
+		mov	RwyLightCol,COL_GREY1      	;The airfield is enemy-held. Dim the lights!
+		jmp SkipAirfieldFriendly1
+@@: 
+        mov	RwyLightCol,COL_NT_BLUE1
+SkipAirfieldFriendly1:
+		
+		
 		xor	di,di		;reset eye co-ord index
 
 		xor	bx,bx		;reset index (high byte always 0)
@@ -2089,7 +2110,17 @@ ScanVertex1	ENDP
 
 ScanVertex2	PROC	NEAR
 
-		mov	RwyLightCol,COL_NT_BLUE1
+		;mov	RwyLightCol,COL_NT_BLUE1
+
+		mov	bp,ModelMapIndex
+		test	SctrGameLayer1[bp],10000000b  ;SECT_ENEMY. Over enemy sector?
+        jz @F; --> No! 
+		mov	RwyLightCol,COL_GREY1      	;The airfield is enemy-held. Dim the lights!
+		jmp SkipAirfieldFriendly2
+@@: 
+        mov	RwyLightCol,COL_NT_BLUE1	;The airfield is a friendly. Show all lights. 
+		
+SkipAirfieldFriendly2:		
 
 		xor	di,di		;reset eye co-ord index
 
@@ -2144,7 +2175,17 @@ ScanVertex2	ENDP
 
 ScanVertex8	PROC	NEAR
 
-		mov	RwyLightCol,COL_NT_BLUE2
+		;mov	RwyLightCol,COL_NT_BLUE2
+
+		mov	bp,ModelMapIndex
+		test	SctrGameLayer1[bp],10000000b  ;SECT_ENEMY. Over enemy sector?
+        jz @F; --> No! 
+		mov	RwyLightCol,COL_GREY1      	;The airfield is enemy-held. Dim the lights!
+		jmp SkipAirfieldFriendly3
+@@: 
+        mov	RwyLightCol,COL_NT_BLUE2
+		
+SkipAirfieldFriendly3:		
 
 		xor	di,di		;reset eye co-ord index
 
@@ -2210,7 +2251,17 @@ ExitMakeVert1	LABEL	NEAR
 
 MakeVertex1	PROC	NEAR
 
-		mov	RwyLightCol,COL_NT_BLUE1
+		;mov	RwyLightCol,COL_NT_BLUE1
+
+		mov	bp,ModelMapIndex
+		test	SctrGameLayer1[bp],10000000b  ;SECT_ENEMY. Over enemy sector?
+        jz @F; --> No! 
+		mov	RwyLightCol,COL_GREY1      	;The airfield is enemy-held. Dim the lights!
+		jmp SkipAirfieldFriendly4
+@@: 
+        mov	RwyLightCol,COL_NT_BLUE1
+
+SkipAirfieldFriendly4:			
 
 		xor	di,di		;reset eye co-ord index
 
@@ -2316,7 +2367,17 @@ ExitMakeVert2	LABEL	NEAR
 
 MakeVertex2	PROC	NEAR
 
-		mov	RwyLightCol,COL_NT_BLUE1
+		;mov	RwyLightCol,COL_NT_BLUE1
+
+		mov	bp,ModelMapIndex
+		test	SctrGameLayer1[bp],10000000b  ;SECT_ENEMY. Over enemy sector?
+        jz @F; --> No! 
+		mov	RwyLightCol,COL_GREY1      	;The airfield is enemy-held. Dim the lights!
+		jmp SkipAirfieldFriendly5
+@@: 
+        mov	RwyLightCol,COL_NT_BLUE1     ;Friendly-held airfield. Show the lights.
+
+SkipAirfieldFriendly5:					
 
 		xor	di,di		;reset eye co-ord index
 
@@ -3456,6 +3517,7 @@ LOOP_COUNT	=	LOOP_COUNT+1
 		ret
 
 CreateLights2	ENDP
+
 
 VISCODE		ENDS
 

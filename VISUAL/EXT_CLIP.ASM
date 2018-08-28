@@ -70,7 +70,7 @@ EXT_ScaleVP	PROC	NEAR
 
 ;* check z eye in range
 
-		cmp	cx,26214	;z eye > max input value?
+		cmp	cx,26214	;z eye > max input value?   32,767 x 4/5
 		jg	SetZMax		;yes ->
 		cmp	cx,-26215	;z eye < min input value?
 		jl	SetZMin		;yes ->

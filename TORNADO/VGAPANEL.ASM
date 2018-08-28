@@ -17,7 +17,9 @@
 ;****************************************************************************
 
 		OPTION	M510		;<<<<< MASM v5.10 <<<<<
-
+PUBLIC VGA_DrwNavigPanBrief	    ;hacked on 9/2/2018
+PUBLIC LoadNavigPan				;hacked on 26/11/2017
+PUBLIC LoadPilotPan				;hacked on 26/11/2017
 		PUBLIC	VGA_InitPanels
 		PUBLIC	VGA_LoadPanel
 		PUBLIC	VGA_ClrPilotPan
@@ -32,9 +34,13 @@
 		PUBLIC	CopyPreviewPan
 		PUBLIC	DrawPreviewPan
 		PUBLIC	StoreWorkScreen
-
+EXTRN QuieterCockpit:BYTE		
+EXTRN EScopeToggle:BYTE		
+EXTRN	M_CosR:WORD
+EXTRN	M_CosP:WORD		
+EXTRN	TrueRadAlt:WORD		
+EXTRN	IronWork:BYTE
 		EXTRN	LoadFile:FAR
-
 		EXTRN	LoadExtrnPan:NEAR
 		EXTRN	LoadFramePan:NEAR
 
@@ -104,6 +110,7 @@
 
 DATA		SEGMENT PARA PUBLIC 'DATA'
 
+MIN_OP_RAD_ALT	EQU	100	
 PILOTPAN_SEG	EQU	VGA_PAGE_2
 PILOTPAN_OFF	EQU	320*96/4 	;<<<<< same as screen position <<<<<
 PILOTPAN_SIZE	EQU	320*104
@@ -216,7 +223,6 @@ MEXTRA		MACRO	xs,ys,xd,yd,w,d
 		ENDM
 
 ;----------------------------------------------------------------------------
-
 ;* VIDBLIT - VideoBlitter macro
 ;*
 ;* pass: page = source video page
@@ -253,8 +259,10 @@ VIDBLIT		MACRO	page,xs,ys,xd,yd,w,d
 
 VGA_InitPanels	PROC	NEAR
 
+		
 		push	es
-
+test	IronWork,1	;ironwork enabled?
+		jz	GetOuttaHere		;no ->
 ;--------------------------
 ;* init pilot's front panel
 ;--------------------------
@@ -278,6 +286,7 @@ VGA_InitPanels	PROC	NEAR
 
 		call	InterleaveData
 
+GetOuttaHere:
 ;-------------------------
 ;* init pilot's side panel
 ;-------------------------
@@ -712,7 +721,6 @@ LoadPSidePan	ENDP
 ;*       VGA_SEQ_MAPMSK
 
 LoadNavigPan	PROC	NEAR
-
 		push	ds
 		push	es
 
@@ -1455,11 +1463,80 @@ VGA_DrwPilotPan	ENDP
 ;* kill: assume all
 
 VGA_DrwNavigPan	PROC	NEAR
+		cmp	TAB2.TAB_MODE,TAB_FLIR_ORI
+		je @F
+		cmp	TAB2.TAB_MODE,TAB_TIALD_ORI
+		je @F		
+		jmp SkipjmpNavigThrotOkk
+		
+@@:		
+        jmp NavigThrotOk
+SkipjmpNavigThrotOkk:
 
+		cmp	TAB1.TAB_MODE,TAB_FLIR_ORI
+	    je CheckForDamageOrOff
+		cmp	TAB1.TAB_MODE,TAB_TIALD_ORI
+	    je CheckForDamageOrOff		
+		jmp SkipCheckForDamageOfOff
+CheckForDamageOrOff:
+		mov	di,OFFSET TAB1	;other TAB display
+		mov	bx,TAB_SSF_PTR[di]
+		test	BYTE PTR [bx],1	    ;TAB1 Damaged?
+		jnz SkipCheckIfRadAltOk ;--> yes
+		;test	TAB_TOGGLE[di],1  ;TAB1 is on?
+		;jnz SkipCheckIfRadAltOk
+		;jmp NavigThrotOk
+		
+		mov	si,OFFSET TAB1	;TV-TAB1 (left) display
+		mov	di,OFFSET TAB2	;TV-TAB1 (left) display	
+
+        cmp	TAB1.TAB_MODE,TAB_FLIR_ORI
+		jne @F
+		test TAB_STATUS[si],1
+		_JZ SkipCheckIfRadAltOk
+		jmp NavigThrotOk
+@@:		
+        cmp	TAB1.TAB_MODE,TAB_TIALD_ORI
+		jne @F
+		test TAB_STATUS[si],1
+		_JZ SkipCheckIfRadAltOk
+		jmp NavigThrotOk
+@@:		
+		
+SkipCheckForDamageOfOff:		
+		cmp	TAB1.TAB_MODE,TAB_TIALD_ORI
+		je CheckIfRadAltOk
+		jmp SkipCheckIfRadAltOk
+		
+;       cmp	TAB1.TAB_MODE,TAB_TIALD_ORI
+;		je NavigThrotOk
+
+		;cmp	TAB1.TAB_MODE,TAB_FLIR_ORI
+		;je NavigThrotOk	
+		;jmp ShowNavigPanelSpritescd..
+        ;cmp	TAB1.TAB_MODE,TAB_TIALD_ORI
+		;jmp NavigThrotOk
+		;je CheckIfRadAltOk
+		;jmp ShowNavigPanelSprites
+CheckIfRadAltOk:		
+        ;cmp	TAB2.TAB_MODE,TAB_FLIR_ORI
+	    ;je @F
+		;If Tornado is pitching violently and the TIALD breaks, then show all the dials!
+        cmp	M_CosP,16384	;pitch in limits (+/-60degs)?
+		jl	SkipCheckIfRadAltOk		;no ->
+		cmp	M_CosR,16384	;roll in limits (+/-60degs)?
+		jl	SkipCheckIfRadAltOk	
+		cmp	TrueRadAlt,MIN_OP_RAD_ALT	;rad alt ok?
+        jge NavigThrotOk
+		
+		
+		jmp NavigThrotOk
+;ShowNavigPanelSprites:
+
+SkipCheckIfRadAltOk:
 ;-------------------
 ;* draw landing gear
 ;-------------------
-
 		test	SSF_Gear,1	;damaged?
 		jnz	@F		;yes ->
 
@@ -1479,6 +1556,11 @@ RedGearLamps2:	VIDBLIT	NAVIGPAN_SEG,80,36,40,139,24,5
 ;* draw ADI bezel
 ;----------------
 
+		;cmp	TAB1.TAB_MODE,TAB_FLIR_ORI
+		;je NavigThrotOk
+		;cmp	TAB1.TAB_MODE,TAB_TIALD_ORI
+		;je NavigThrotOk
+		
 NavigGearOk:	MEXTRA	56,49,72,141,24,19
 
 ;----------------------
@@ -1511,17 +1593,32 @@ NavigAutoOk:	test	AutoThrot,1	;auto-throttle engaged?
 ;* draw attention getters
 ;------------------------
 
-NavigThrotOk:	test	Attention,1	;get attention?
-	  	jz	@F		;no ->
-
+NavigThrotOk:	
+        test	Attention,1	;get attention?
+	  	jz	@F		;no ->	
+		
 	  	VIDBLIT	PILOTPAN_SEG,176,151,0,103,16,17
 	  	VIDBLIT	PILOTPAN_SEG,176,168,304,103,16,17
 
 	  	jmp	NavigAttnOk
 
-@@:	  	VIDBLIT	NAVIGPAN_SEG,0,103,0,103,16,17
-	  	VIDBLIT	NAVIGPAN_SEG,304,103,304,103,16,17
+@@:	  	
+		cmp	TAB2.TAB_MODE,TAB_FLIR_ORI
+		je sinisini
+		cmp	TAB2.TAB_MODE,TAB_TIALD_ORI
+		je sinisini
+		jmp SkipjmpNavigThrotOkk3
+		
+sinisini:		
+        jmp	NavigAttnOk
+SkipjmpNavigThrotOkk3:	
 
+        cmp	TAB1.TAB_MODE,TAB_FLIR_ORI
+        je NavigAttnOk
+		cmp	TAB1.TAB_MODE,TAB_TIALD_ORI
+		je NavigAttnOk
+        VIDBLIT	NAVIGPAN_SEG,0,103,0,103,16,17
+	  	VIDBLIT	NAVIGPAN_SEG,304,103,304,103,16,17
 ;---------------
 ;* warning panel
 ;---------------
@@ -1648,7 +1745,24 @@ NavigAttnOk:	mov	ax,RedWarnings1
 ;* draw MFD mouse active lamp
 ;----------------------------
 
-@@:		mov	si,OFFSET NAVIG_MFD
+@@:		
+
+		cmp	TAB2.TAB_MODE,TAB_FLIR_ORI
+		je @F
+		cmp	TAB2.TAB_MODE,TAB_TIALD_ORI
+		je @F		
+		jmp SkipjmpNavigThrotOkk2
+		
+@@:		
+        ret
+SkipjmpNavigThrotOkk2:
+
+
+        cmp	TAB1.TAB_MODE,TAB_FLIR_ORI
+		je NavigECMOk
+        cmp	TAB1.TAB_MODE,TAB_TIALD_ORI
+		je NavigECMOk		
+        mov	si,OFFSET NAVIG_MFD
 
 ;* check MFD on, not damaged, display requires mouse and display has mouse
 
@@ -1751,6 +1865,73 @@ NavigRadarOk:	test	ECMActive,1 	;ECM on?
 NavigECMOk:	ret
 
 VGA_DrwNavigPan	ENDP
+
+
+;----------------------------------------------------------------------------
+;* VGA_DrwNavigPanBrief - draw navigator's panel sprites
+;*
+;* pass: nothing
+;* ret : nothing
+;* kill: assume all
+
+VGA_DrwNavigPanBrief	PROC	NEAR
+
+;-------------------
+;* draw landing gear
+;-------------------
+
+		test	SSF_Gear,1	;damaged?
+		jnz	@F		;yes ->
+
+		cmp	GearTimer,0	;gear in motion?
+		jne	RedGearLamps2b	;yes ->
+
+@@:		test	Gear,1		;gear lowered?
+		jz	NavigGearOkb	;no ->
+
+		VIDBLIT	NAVIGPAN_SEG,80,41,40,146,24,5
+
+		jmp	NavigGearOkb
+
+RedGearLamps2b:	VIDBLIT	NAVIGPAN_SEG,80,36,40,139,24,5
+
+;----------------
+;* draw ADI bezel
+;----------------
+
+NavigGearOkb:	MEXTRA	56,49,72,141,24,19
+
+;----------------------
+;* auto-pilot indicator
+;----------------------
+
+		cmp	AutoMode,AUTO_OFF	;auto-pilot engaged?
+		je	@F			;no ->
+
+		VIDBLIT	PILOTPAN_SEG,128,182,124,130,8,5
+
+		jmp	NavigAutoOkb
+
+@@:		VIDBLIT	NAVIGPAN_SEG,124,130,124,130,8,5
+
+;-------------------------
+;* auto-throttle indicator
+;-------------------------
+
+NavigAutoOkb:	test	AutoThrot,1	;auto-throttle engaged?
+		jz	@F		;no ->
+
+		VIDBLIT	PILOTPAN_SEG,128,172,132,130,16,5
+
+		ret
+
+@@:		VIDBLIT	NAVIGPAN_SEG,132,130,132,130,16,5
+
+ret
+
+VGA_DrwNavigPanBrief	ENDP
+
+
 
 ;----------------------------------------------------------------------------
 
@@ -2148,12 +2329,48 @@ DrawRadarNoise	PROC	NEAR
 
 		cmp	CrewMode,CREW_PILOT	;pilot?
 		jne	@F			;no, nav ->
+;----------------------------------------------------------------------------
 
+;* VIDBLIT - VideoBlitter macro
+;*
+;* pass: page = source video page
+;*         xs = x source (4 pixel boundary)
+;*         ys = y source (4 pixel boundary)
+;*         xd = x dest (4 pixel boundary)
+;*         yd = y dest (4 pixel boundary)
+;*          w = width (multiple of 4 pixels)
+;*          d = depth
+;* ret : nothing
+;* kill: assume all
+;
+;VIDBLIT		MACRO	page,xs,ys,xd,yd,w,d
+
+        cmp EScopeToggle,8
+		je zxzx ;je RepositionBlitter ;yes ->  		
+		cmp EScopeToggle,13
+		je zxzx ;je RepositionBlitter ;yes -> 
+zxzx:		
+		test QuieterCockpit,1 ;in cockpit?
+		jz RepositionBlitter  ;->no
+		
 		VIDBLIT	NAVIGPAN_SEG,16,26,128,144,64,48
-
+		
 		ret
 
-@@:		VIDBLIT	NAVIGPAN_SEG,16,26,128,57,64,48
+@@:		;VIDBLIT	NAVIGPAN_SEG,16,26,128,57,64,48
+ 		
+		cmp	TAB1.TAB_MODE,TAB_FLIR_ORI	;TAB2's FLIR selected?  Frankie hack on 5/12/2017
+        je RepositionBlitter ;yes ->  		
+		cmp	TAB1.TAB_MODE,TAB_TIALD_ORI	;TAB2's FLIR selected?  Frankie hack on 5/12/2017
+        je RepositionBlitter ;yes ->  				
+		cmp	TAB2.TAB_MODE,TAB_FLIR_ORI	;TAB2's FLIR selected?  Frankie hack on 5/12/2017
+        je RepositionBlitter ;yes ->  		
+		cmp	TAB2.TAB_MODE,TAB_TIALD_ORI	;TAB2's FLIR selected?  Frankie hack on 5/12/2017
+        je RepositionBlitter ;yes ->  			
+        VIDBLIT	NAVIGPAN_SEG,16,26,128,57,64,48
+		ret
+RepositionBlitter:
+        VIDBLIT	NAVIGPAN_SEG,16,26,0,0,64,48
 
 		ret
 

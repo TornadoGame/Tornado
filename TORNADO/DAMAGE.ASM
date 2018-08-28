@@ -46,7 +46,19 @@
 		EXTRN	ECMFitted:BYTE
 		EXTRN	ECMActive:BYTE
 
+EXTRN	ShakePriority:BYTE
+EXTRN	HShake:BYTE	
+EXTRN	VShake:BYTE
+EXTRN	ShakeTimer:WORD
+EXTRN	HSHAKE_HI:ABS
+EXTRN	VSHAKE_HI:ABS
+EXTRN	HSHAKE_HI:ABS
+EXTRN	VSHAKE_HI:ABS
+EXTRN	VSHAKE_OFF:ABS
+EXTRN	HSHAKE_OFF:ABS
 ;============================================================================
+INCLUDE	MISCMAC.INC
+
 
 		INCLUDE	MAINDATA.INC
 
@@ -101,7 +113,7 @@ MaxDamage	PROC	FAR
 
 		call	RandX		;0.00 ..  2.55
 		shl	ax,1		;0.00 ..  5.10
-		add	ax,8*100	;8.00 .. 15.10
+		add	ax,8*100	;8.00 .. 13.10
 
 		mov	dx,ax
 
@@ -176,152 +188,153 @@ RandomDamage	PROC	NEAR
 		shl	bx,1		;*2 word index
 
 		jmp	DamageSwitch[bx]
-
-;---------------------------
+		;jmp DamTAB1
+ 
+;0---------------------------
 DamGear		LABEL	NEAR
 ;---------------------------
 
 		mov	SSF_Gear,1
 		or	RedWarnings2,RED_UC
-
+        SHAKE	SHAKE_NOSE_DOWN,HSHAKE_HI,VSHAKE_HI,65535;
 		ret
 
-;---------------------------
+;1---------------------------
 DamWheelBrakes	LABEL	NEAR
 ;---------------------------
 
 		mov	SSF_WheelBrakes,1
 		or	AmbWarnings2,AMB_WB
-
+        SHAKE	SHAKE_NOSE_DOWN,HSHAKE_HI,VSHAKE_HI,65535;
 		ret
 
-;---------------------------
+;2---------------------------
 DamAirBrakes	LABEL	NEAR
 ;---------------------------
 
 		mov	SSF_AirBrakes,1
 		or	AmbWarnings2,AMB_AB
-
+        SHAKE	SHAKE_NOSE_DOWN,HSHAKE_HI,VSHAKE_HI,65535;
 		ret
 
-;---------------------------
+;3---------------------------
 DamEngine1	LABEL	NEAR
 ;---------------------------
 
 		mov	SSF_Engine1,1
 		or	RedWarnings2,RED_L_ENG
-
+        SHAKE	SHAKE_NOSE_DOWN,HSHAKE_HI,VSHAKE_HI,65535;
 		ret
 
-;---------------------------
+;4---------------------------
 DamEngine2	LABEL	NEAR
 ;---------------------------
 
 		mov	SSF_Engine2,1
 		or	RedWarnings2,RED_R_ENG
-
+        SHAKE	SHAKE_NOSE_DOWN,HSHAKE_HI,VSHAKE_HI,65535;
 		ret
 
-;---------------------------
+;5---------------------------
 DamWingSweep	LABEL	NEAR
 ;---------------------------
 
 		mov	SSF_Sweep,1
 		or	AmbWarnings2,AMB_SWP
-
+        SHAKE	SHAKE_NOSE_DOWN,HSHAKE_HI,VSHAKE_HI,65535;
 		ret
 
-;---------------------------
+;6---------------------------
 DamFlaps	LABEL	NEAR
 ;---------------------------
 
 		mov	SSF_Flaps,1
 		or	AmbWarnings2,AMB_FLPS
-
+        SHAKE	SHAKE_NOSE_DOWN,HSHAKE_HI,VSHAKE_HI,65535;
 		ret
 
-;---------------------------
+;7---------------------------
 DamThrustRvrs	LABEL	NEAR
 ;---------------------------
 
 		mov	SSF_ThrustRvrs,1
 		or	RedWarnings2,RED_REV
-
+        SHAKE	SHAKE_NOSE_DOWN,HSHAKE_HI,VSHAKE_HI,65535;
 		ret
 
-;---------------------------
+;8---------------------------
 DamSPILS	LABEL	NEAR
 ;---------------------------
 
 		mov	SSF_SPILS,1
 		or	RedWarnings2,RED_SPILS
-
+        SHAKE	SHAKE_NOSE_DOWN,HSHAKE_HI,VSHAKE_HI,65535;
 		ret
 
-;---------------------------
+;9---------------------------
 DamHUD		LABEL	NEAR
 ;---------------------------
 
 		mov	SSF_HUD,1
 		or	AmbWarnings2,AMB_HUD
-
+        SHAKE	SHAKE_NOSE_DOWN,HSHAKE_HI,VSHAKE_HI,65535;
 		ret
 
-;---------------------------
+;10---------------------------
 DamPilotMFD	LABEL	NEAR
 ;---------------------------
 
 		mov	SSF_PilotMFD,1
 		or	AmbWarnings2,AMB_MFD1
-
+        SHAKE	SHAKE_NOSE_DOWN,HSHAKE_HI,VSHAKE_OFF,65535;
 		ret
 
-;---------------------------
+;11---------------------------
 DamNavigMFD	LABEL	NEAR
 ;---------------------------
 
 		mov	SSF_NavigMFD,1
 		or	AmbWarnings2,AMB_MFD2
-
+        SHAKE	SHAKE_NOSE_DOWN,HSHAKE_HI,VSHAKE_OFF,65535;
 		ret
 
-;---------------------------
+;12---------------------------
 DamTAB1		LABEL	NEAR
 ;---------------------------
 
 		mov	SSF_TAB1,1
 		or	AmbWarnings2,AMB_L_TAB
-
+        SHAKE	SHAKE_NOSE_DOWN,HSHAKE_HI,VSHAKE_OFF,65535;
 		ret
 
-;---------------------------
+;13---------------------------
 DamTAB2		LABEL	NEAR
 ;---------------------------
 
 		mov	SSF_TAB2,1
 		or	AmbWarnings2,AMB_R_TAB
-
+        SHAKE	SHAKE_NOSE_DOWN,HSHAKE_HI,VSHAKE_OFF,65535;
 		ret
 
-;---------------------------
+;14---------------------------
 DamOxygen	LABEL	NEAR
 ;---------------------------
 
 		mov	SSF_Oxygen,1
 		or	RedWarnings2,RED_OXY
-
+        SHAKE	SHAKE_NOSE_DOWN,HSHAKE_HI,VSHAKE_OFF,65535;
 		ret
 
-;---------------------------
+;15---------------------------
 DamRadar	LABEL	NEAR
 ;---------------------------
 
 		mov	SSF_Radar,1
 		or	AmbWarnings2,AMB_RAD
-
+        SHAKE	SHAKE_NOSE_DOWN,HSHAKE_HI,VSHAKE_OFF,65535;
 		ret
 
-;---------------------------
+;16---------------------------
 DamECM		LABEL	NEAR
 ;---------------------------
 
@@ -330,30 +343,30 @@ DamECM		LABEL	NEAR
 
 		mov	SSF_ECM,1
 		or	AmbWarnings2,AMB_ECM
-
+        SHAKE	SHAKE_NOSE_DOWN,HSHAKE_HI,VSHAKE_OFF,65535;
 		mov	ECMActive,0
 
 @@:		ret
 
-;---------------------------
+;17---------------------------
 DamRWR		LABEL	NEAR
 ;---------------------------
 
 		mov	SSF_RWR,1
 		or	AmbWarnings2,AMB_RWR
-
+        SHAKE	SHAKE_NOSE_DOWN,HSHAKE_HI,VSHAKE_OFF,65535;
 		ret
 
-;---------------------------
+;18---------------------------
 DamADC		LABEL	NEAR
 ;---------------------------
 
 		mov	SSF_ADC,1
 		or	AmbWarnings2,AMB_ADC
-
+        SHAKE	SHAKE_NOSE_DOWN,HSHAKE_HI,VSHAKE_OFF,65535;
 		ret
 
-;---------------------------
+;19---------------------------
 DamEngineFire	LABEL	NEAR
 ;---------------------------
 
@@ -371,6 +384,7 @@ DamEngineFire	LABEL	NEAR
 
 		mov	EngFire1,1
 		or	RedWarnings2,RED_L_FIRE
+		SHAKE	SHAKE_NOSE_DOWN,HSHAKE_HI,VSHAKE_HI,65535;
 		
 ;* random rh eng fire
 
@@ -380,7 +394,8 @@ DamEngineFire	LABEL	NEAR
 
 		mov	EngFire2,1
 		or	RedWarnings2,RED_R_FIRE
-
+        SHAKE	SHAKE_NOSE_DOWN,HSHAKE_HI,VSHAKE_HI,65535;
+		
 SkipFire:	ret
 
 RandomDamage	ENDP

@@ -229,7 +229,7 @@ CalcTransMatrix	ENDP
 CalcEyeCoords	PROC	FAR
 
 		mov	si,ax
-		mov	di,bx
+	    mov	di,bx  
 		push	cx
 
 		mov	ax,A1

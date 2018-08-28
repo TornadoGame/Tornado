@@ -8,9 +8,39 @@
 ;*
 ;****************************************************************************
 
-		OPTION	M510		;<<<<< MASM v5.10 <<<<<
+		OPTION	M510		;<<<<< MASM v5.10 <<<<<	
+PUBLIC AllowSplitScreenBigMap		
+PUBLIC SplitScreenBigMapIsOn
+PUBLIC CurrentViewIsCheckSix		
+PUBLIC ShiftDwasPressed		
+PUBLIC MFD_Counter
+PUBLIC CounterThird		
+PUBLIC SAM_Launched_While_In_Cockpit   ;added by Frankie Kam on 3rd June 2018
+PUBLIC AAA_or_SAM_value
+;PUBLIC InitialToggleZRK_ZSU
+PUBLIC EScopeToggle
+PUBLIC ToggleZRK_ZSU
+PUBLIC ToggleFullScreen
+PUBLIC ZRKrombCamDist 
+PUBLIC YawValue
+PUBLIC YawValue2
+PUBLIC YawValue3
+PUBLIC YawValue_ZRK_AAA
+PUBLIC PlayTheme
+PUBLIC InWeaponView
+PUBLIC HorizonValue
+PUBLIC HorizonValue2
+PUBLIC HorizonValue_ZRK_AAA
+PUBLIC HorizonValue3
+PUBLIC HorizonValue4
+PUBLIC HorizonValue5
+PUBLIC HorizonValue6
+PUBLIC CurrentViewIsCheckSix
+PUBLIC CheckSixValue
+PUBLIC HorizonBombValue
 
-		PUBLIC	UpdateAvionics
+PUBLIC CockpitViews
+        PUBLIC	UpdateAvionics
 		PUBLIC	AdvanceWP
 		PUBLIC	SelectTgtWP
 		PUBLIC	CancelTgtWP
@@ -130,7 +160,7 @@
 		PUBLIC	MAX_AUTO_HDG
 		PUBLIC	MIN_AUTO_ALT
 		PUBLIC	MAX_AUTO_ALT
-
+EXTRN SAM_VIEW:WORD
 		EXTRN	CalcGndHeight:FAR
 		EXTRN	QCalcGndHeight:FAR
 		EXTRN	CalcDeltaXY:FAR
@@ -262,6 +292,7 @@
 		EXTRN	KF_CancelAirTgt:BYTE
 		EXTRN	ClipWndwYOrg:BYTE
 		EXTRN	AutoTrack:BYTE
+		
 		EXTRN	KF_SkipWaypoint:BYTE
 		EXTRN	KF_SelectTgtWP:BYTE
 		EXTRN	KF_CancelTgtWP:BYTE
@@ -304,7 +335,11 @@ DATA		SEGMENT PARA PUBLIC 'DATA'
 ;----------------------
 
 SysStatusFlags	LABEL	BYTE
-
+AllowSplitScreenBigMap DB 0
+SplitScreenBigMapIsOn DB 0
+CurrentViewIsCheckSix DB 0
+SAM_Launched_While_In_Cockpit DB 0 ;SAM Launched against player's Tornado? 0 = no; 1 = yes;
+                                   ;Added by Frankie Kam on 3rd June 2018
 SSF_Gear	DB	0		;undercarriage
 SSF_WheelBrakes	DB	0		;wheelbrakes
 SSF_AirBrakes	DB	0		;airbrakes
@@ -325,7 +360,6 @@ SSF_Radar	DB	0		;ground / air radar
 SSF_ECM		DB	0		;ECM damaged
 SSF_RWR		DB	0		;RWR damaged
 SSF_ADC		DB	0		;ADC damaged
-
 		EVEN
 
 ;-----------------
@@ -334,6 +368,9 @@ SSF_ADC		DB	0		;ADC damaged
 
 Vfac		DW	0		;velocity factor wrt Vtas
 
+CounterThird DW 0       ;Counter to go back to Navigation Panel on the third Shift+D
+MFD_Counter       DW 0
+ShiftDwasPressed DB 0
 ;----------------
 ;* radar altitude
 ;----------------
@@ -342,7 +379,22 @@ RAD_ALT_CEILING	EQU	10000		;(keep < 32767 for terrain following)
 
 TrueRadAlt	DW	0		;0 .. RAD_ALT_CEILING
 DispRadAlt	DW	0		;damped value for display purposes only
-
+ZRKrombCamDist DW  80
+YawValue DW 0
+YawValue2 DW 0
+YawValue3 DW 0
+YawValue_ZRK_AAA DW 0
+HorizonValue DW 22;-10
+HorizonValue2 DW 10;-10
+HorizonValue_ZRK_AAA DW 18;40 ;-10
+HorizonValue3 DW 10
+HorizonValue4 DW -120
+HorizonValue5 DW -10
+HorizonValue6 DW 30
+CheckSixValue DW -130
+HorizonBombValue DW -40
+InWeaponView DB 0
+CockpitViews DB 1
 ;--------------------
 ;* ground height data
 ;--------------------
@@ -395,19 +447,23 @@ TF_MAX_PITCH_DN	EQU	2731		;15 degs
 
 ;* ride altitudes
 
-MAX_TF_INDEX	EQU	12
+MAX_TF_INDEX	EQU	20
 
 TFRideIndex	DW	0		;0 .. MAX_TF_INDEX step 2
 
-TFRideTable	DW	200		;0
-		DW	300		;2
-		DW	400		;4
-		DW	500		;6
-		DW	750		;8
-		DW	1000		;10
-		DW	1500		;12
+TFRideTable	DW	90    ;0 hack
+		    DW	100   ;2 hack
+		    DW	150   ;4 hack
+		    DW  200   ;6 hack
+		    DW  300   ;8 hack
+		    DW	400   ;10 hack
+		    DW	500   ;12 hack
+		    DW	600   ;14 hack
+		    DW	700   ;16 hack
+		    DW	800   ;18 hack
+		    DW	1000  ;20 hack
 
-TFRideAlt	DW	200		;200 .. 1500ft
+TFRideAlt	DW	100		;100 .. 1000ft
 
 ;* TF system flags
 
@@ -477,6 +533,12 @@ AimReheat	DW	0
 AutoThrot 	DB	0		;1 = auto-throttle engaged
 ATError		DB	0		;1 = auto_throttle error
 
+PlayTheme   DB  0         
+EScopeToggle DB 0
+ToggleZRK_ZSU DB 0      ;Toggle between the ZRK-Romba nd ZSU-23-4 in Tracking-like view (see VIEWS.ASM)
+;InitialToggleZRK_ZSU DW -1
+ToggleFullScreen DB 0
+AAA_or_SAM_value VIEWPOINT <0,0,0,0,8>
 		EVEN
 
 ;--------------
@@ -1171,7 +1233,9 @@ ADCOk:		KTEST	KF_AutoCancel
 ;* approach mode request?
 ;------------------------
 
-SkipCancel:	KTEST	KF_Approach
+SkipCancel:	
+
+        KTEST	KF_Approach
 		jz	SkipApproach
 
 		call	AutoCancel
@@ -4082,7 +4146,6 @@ InILSBeam:    	pop	cx
 UpdateILS	ENDP
 
 ;----------------------------------------------------------------------------
-
 ;* CheckILS - check if aircraft is in ILS beam
 ;*
 ;* pass: al = ILS flag
@@ -6766,7 +6829,7 @@ MissileLocated	LABEL	NEAR
 
 		mov	ax,RWR_VIEW.VP_YFT
 		mov	RWRThreats[bp].RWR_YFT,ax
-
+		
 		mov	RWRThreats[bp].RWR_PTR,-1
 
 ;* sort threat type (radar or IR seeker)

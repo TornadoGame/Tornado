@@ -24,10 +24,10 @@
 ;****************************************************************************
 
 		OPTION	M510		;<<<<< MASM v5.10 <<<<<
-
+        PUBLIC  InitMovingMap
 		PUBLIC	UpdateMovingMap
 		PUBLIC	DrawMapBorder
-
+PUBLIC DispType
 		PUBLIC	CurrentWPX
 		PUBLIC	CurrentWPY
 		PUBLIC	FloatWPX
@@ -46,7 +46,9 @@
 		PUBLIC	MAP_ZOOM6
 		PUBLIC	MAP_ORG_CENTRE
 		PUBLIC	MAP_ORG_BASE
-
+;EXTRN AllowSplitScreenBigMap:BYTE
+EXTRN   NVG_set:BYTE
+EXTRN EScopeToggle:BYTE
 		EXTRN	BlockFill:FAR
 		EXTRN	PolyFill:FAR
 		EXTRN	PolyLine:FAR
@@ -283,8 +285,8 @@ SctrScale	DB	0,0
 
 DispSizeTable	DW	 64,  48	;MAP_MFD_DISP
 		DW	 96,  72	;MAP_TAB_DISP
-		DW	320, 200	;MAP_BIG_DISP
-
+		DW	320, 105	;MAP_BIG_DISP  320,105 - hack 25/8/2018
+		
 ;--------------------------
 ;* scan size / scale tables (wrt DispType and Zoom)
 ;--------------------------
@@ -448,8 +450,24 @@ PANCODE		SEGMENT BYTE PUBLIC 'CODE'
 
 UpdateMovingMap	PROC	FAR
 
+;        cmp	DispType,MAP_BIG_DISP	;BIG display?
+;		je @F
+;		jmp hopstepleap
+;@@:		
+;        cmp EScopeToggle,10
+;		jbe check
+;		ret
+;check:  
+;        cmp EScopeToggle,0
+;		jg assign096b
+;		ret
+;assign096b: 		
+;        mov cx, 0
+;		mov bl,96
+;hopstepleap:		
+		
 		call	InitMovingMap
-
+		
 		call	DrawGround
 
 ;------------------------------------------
@@ -636,16 +654,30 @@ UpdateMovingMap	ENDP
 InitMovingMap	PROC	NEAR
 
 		mov	DispType,ax
-
+		
+        cmp	DispType,MAP_BIG_DISP	;BIG display?
+		je @F
+		jmp hopstepleap2
+@@:		
+        cmp EScopeToggle,10
+		jbe check2
+		ret
+check2:  
+        cmp EScopeToggle,0
+		jg assign096
+		ret
+assign096: 		
+        mov cx, 0
+		mov bl,96
+hopstepleap2:		
 		mov	GndRadar,bh
 
 		mov	Zoom,dx
 
 		mov	Origin,bp
-
 		mov	VP.V_X_ORG,cx
-
-		mov	BYTE PTR VP.V_Y_ORG,bl
+			
+		mov	BYTE PTR VP.V_Y_ORG,bl  ;kkk
 
 		COPY_VP	MAP_VIEW,si
 
@@ -655,7 +687,7 @@ InitMovingMap	PROC	NEAR
 
 		cmp	DispType,MAP_BIG_DISP	;BIG display?
 		je	SortDisp		;yes ->
-
+				
 		cmp	Origin,MAP_ORG_CENTRE	;map origin at display centre?
 		je	SortDisp		;yes ->
 
@@ -669,6 +701,7 @@ InitMovingMap	PROC	NEAR
 		mov	si,OFFSET TABBaseOrgTable
 
 @@:		mov	bx,Zoom
+
 		shl	bx,1
 		mov	bp,[si+bx+0]
 
@@ -838,7 +871,6 @@ SortDisp:	mov	bx,DispType
 		adc	ax,0
 
 		mov	YGrid,ax
-
 		ret
 
 InitMovingMap	ENDP
@@ -1669,7 +1701,8 @@ ScanGndObjects:	mov	ax,SECDATA1
 		cmp	cl,GND_COPSED	;tree?
 		jbe	ScanGndObjects	;yes ->
 
-@@:		mov	cl,SctrScale
+@@:    
+        mov	cl,SctrScale
 
 		xor	dh,dh
 		sal	dx,cl
@@ -1686,7 +1719,13 @@ ScanGndObjects:	mov	ax,SECDATA1
 		call	VDotClip
 		jc	@F		;non-visible ->
 
-		mov	al,GndObjectCol
+		cmp NVG_set,1
+		je NightVisionGndObj
+		mov	al,GndObjectCol;
+		jmp SkipNightVisionGrndObj
+NightVisionGndObj:
+		mov	al,COL_HUD
+SkipNightVisionGrndObj:		
 		call	SetPixel
 
 @@:		pop	si
@@ -1951,8 +1990,14 @@ ScanStatMobs:	mov	ax,MSECDATA1
 
 		call	VDotClip
 		jc	SkipStatic1	;non-visible ->
-
+		
+		cmp NVG_set,1
+		je setcolourhud3
 		mov	al,COL_CRT16
+		jmp zxy3
+setcolourhud3:		
+		mov	al,COL_HUD
+zxy3:	
 		call	SetPixel
 
 SkipStatic1:	pop	si
@@ -2032,7 +2077,13 @@ ScanMobiles:  	cmp	si,-1		;end of list?
 		call	VDotClip
 		jc	SkipMobile	;non-visible ->
 
+		cmp NVG_set,1
+		je setcolourhud4
 		mov	al,COL_CRT16
+		jmp zxy4
+setcolourhud4:		
+		mov	al,COL_HUD
+zxy4:
 		call	SetPixel
 
 SkipMobile:	pop	si
@@ -2675,11 +2726,11 @@ DrawMapBorder	PROC	FAR
 ;-------------
 
 ;* (Xb, Yb) ÚÄÄÄÄÄÄÄÄÄÄÄÄÄÄ¿ (Xc, Yc)
-;*          ³              ³
-;*          ³              ³
-;*          ³              ³
-;*          ³              ³
-;*          ³              ³
+;*          ?             ?
+;*          ?             ?
+;*          ?             ?
+;*          ?             ?
+;*          ?             ?
 ;* (Xa, Ya) ÀÄÄÄÄÄÄÄÄÄÄÄÄÄÄÙ (Xd, Yd)
 ;*
 ;* Xa' = Xa - lin x =    0 - lin x = -(lin x)
@@ -2836,7 +2887,14 @@ HDotLoop:	cmp	cx,dx		;end of line?
 		push	cx
 		push	dx
 
+		cmp NVG_set,1
+		je setcolourhud1
 		mov	al,COL_MAP_BORDER
+		jmp zxy1
+setcolourhud1:		
+		mov	al,COL_HUD
+zxy1:		
+		
 		call	SetPixel
 
 		pop	dx
@@ -2878,7 +2936,13 @@ VDotLoop:	cmp	bl,bh		;end of line?
 		push	cx
 		push	dx
 
+		cmp NVG_set,1
+		je setcolourhud2
 		mov	al,COL_MAP_BORDER
+		jmp zxy2
+setcolourhud2:		
+		mov	al,COL_HUD
+zxy2:	
 		call	SetPixel
 
 		pop	dx

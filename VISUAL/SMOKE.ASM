@@ -252,7 +252,7 @@ InitGnd1	PROC	NEAR
 		mov	TMP_SMOKE.SMOKE_TIME,0
 
 		call	RandX
-		add	ax,128
+		add	ax,8 ;128
 		mov	TMP_SMOKE.SMOKE_EXP_TIME,ax
 
 		push	cx
@@ -272,7 +272,7 @@ AddSmokeLoop: 	push	cx
 		RND_SMOKE_COL
 
 		call	RandX
-		add	ax,128
+		add	ax,8;128
 		mov	TMP_SMOKE.SMOKE_EXP_TIME,ax
 
 ;* offset xft from origin (keep within sector)
@@ -372,7 +372,7 @@ InitAir1	PROC	NEAR
 		mov	TMP_SMOKE.SMOKE_SIB_CNTR,0
 
 		call	RandX
-		add	ax,128
+		add	ax,8;128
 		mov	TMP_SMOKE.SMOKE_EXP_TIME,ax
 
 		call	CheckAirPos
@@ -396,7 +396,7 @@ AirSmokeLoop: 	push	cx
 		RND_SMOKE_COL
 
 		call	RandX
-		add	ax,128
+		add	ax,8;128
 		mov	TMP_SMOKE.SMOKE_EXP_TIME,ax
 
 ;* offset xft from origin (keep within sector)
@@ -507,15 +507,15 @@ CheckAirPos	PROC	NEAR
 		shl	ax,1
 		ENDM
 
-		cmp	ax,128
+		cmp	ax,8;128
 		jae	@F
 
 SetMinSize:	mov	ax,bp
-		add	ax,32
+		add	ax,8;32
 
 		mov	WORD PTR TMP_SMOKE.SMOKE_ZFT_LO,ax
 
-		mov	ax,128
+		mov	ax,8;128
 
 @@:		mov	TMP_SMOKE.SMOKE_EXP_TIME,ax
 
@@ -689,7 +689,7 @@ CtrlGnd1	PROC	NEAR
 Gnd1Phase1	LABEL	NEAR		;expand radius
 ;---------------------------
 
-		REPT	2		;radius = time / 4
+		REPT	3;2		;radius = time / 4
 		shr	ax,1
 		ENDM
 
@@ -751,7 +751,7 @@ Gnd1Phase2	LABEL	NEAR		;contract radius and drift upwards
 		mov	TMP_SMOKE.SMOKE_TIME,0
 
 		call	RandX
-		add	ax,128
+		add	ax,8;128
 		mov	TMP_SMOKE.SMOKE_EXP_TIME,ax
 
 		call	MakeSingleSmoke
@@ -774,7 +774,7 @@ SkipRepro:	shr	dx,1
 
 		sub	dx,ax
 
-		REPT	2		;radius = (expand time - time) / 4
+		REPT	3;2		;radius = (expand time - time) / 4
 		shr	dx,1
 		ENDM
 
@@ -851,7 +851,7 @@ CtrlAir1	PROC	NEAR
 Air1Phase1	LABEL	NEAR		;expand radius
 ;---------------------------
 
-		REPT	2		;radius = time / 4
+		REPT	3;2		;radius = time / 4
 		shr	ax,1
 		ENDM
 
@@ -869,7 +869,7 @@ Air1Phase2	LABEL	NEAR		;contract radius
 
 		sub	dx,ax
 
-		REPT	2		;radius = (expand time - time) / 4
+		REPT	3;2		;radius = (expand time - time) / 4
 		shr	dx,1
 		ENDM
 

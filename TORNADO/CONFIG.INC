@@ -18,7 +18,7 @@
 ;* display debug values
 ;----------------------
 
-OPT_DEBUG  	EQU	0		;1 = enabled, 0 = disabled
+OPT_DEBUG  	EQU	1		;1 = enabled, 0 = disabled
 
 ;--------------
 ;* turbo option

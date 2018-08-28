@@ -12,7 +12,10 @@
 
 		PUBLIC	MapView
 		PUBLIC	MapCompass
-
+EXTRN NVG_set:BYTE		
+EXTRN SplitScreenBigMapIsOn:BYTE		
+EXTRN DispType:WORD
+EXTRN EScopeToggle:BYTE
 		EXTRN	UpdateMovingMap:FAR
 		EXTRN	VSetViewport:FAR
 		EXTRN	VSetRotation:FAR
@@ -52,12 +55,18 @@ DATA		SEGMENT PARA PUBLIC 'DATA'
 
 MapZoom		DW	MAP_ZOOM1
 
-VP		VIEWPORT <0,0,320,200,5,5>
+VP		VIEWPORT <0,0,320,300,5,5> ;hack on 2/8/2018
 
 Range$		LABEL	BYTE
 		P_OVER1
 		P_CHAR2
+		cmp NVG_set,1
+		je @F
+		PD_ATTR	000h,000h,000h,000h,000h,000h,COL_HUD,0
+		jmp zx
+@@:		
 		PD_ATTR	000h,000h,000h,000h,000h,000h,COL_COMPASS,0
+zx:		
 		PD_XY	148,114
 		PP_STR	RangeValsPtr
 		DB	"NM"
@@ -118,7 +127,9 @@ SkipZoomIn:	KTEST	KF_MapZoomOut	;zoom out?
 ;* draw map
 ;----------
 
-SkipZoomOut:	mov	ax,MAP_BIG_DISP
+SkipZoomOut:
+
+        mov	ax,MAP_BIG_DISP
 		xor	cx,cx
 		xor	bl,bl
 		xor	bh,bh
@@ -129,6 +140,22 @@ SkipZoomOut:	mov	ax,MAP_BIG_DISP
 		call	UpdateMovingMap
 		pop	si
 
+        cmp	DispType,MAP_BIG_DISP	;BIG display?
+		je @F
+		jmp hopstepleap3
+@@:		
+        cmp EScopeToggle,10
+		jbe check
+		ret
+check:  
+        cmp EScopeToggle,0
+		jg assign096c
+		ret
+assign096c: 		
+        mov cx, 0
+		mov bl,96
+hopstepleap3:		
+		
 		mov	ax,VP_HDG[si]
 		mov	dx,MapZoom
 		call	MapCompass
@@ -170,24 +197,48 @@ MapCompass	PROC	FAR
 ;---------------------
 ;* draw aircraft datum
 ;---------------------
-
+		cmp NVG_set,1
+		je setcolhud3
 		mov	al,COL_COMPASS
 		mov	cx,160
-		mov	bl,100-4
-		mov	bh,100+3
+		mov	bl,100-4+45 ;kkk
+		mov	bh,100+3+45
 		call	VLineDraw
 
 		mov	al,COL_COMPASS
 		mov	cx,160-4
 		mov	dx,160+4
-		mov	bl,100-2
+		mov	bl,100-2+45
 		call	HLineDraw
 
 		mov	al,COL_COMPASS
 		mov	cx,160-2
 		mov	dx,160+2
-		mov	bl,100+2
+		mov	bl,100+2+45
 		call	HLineDraw
+
+		jmp zx2
+		
+setcolhud3:	
+		mov	al,COL_HUD
+		mov	cx,160
+		mov	bl,100-4+45 ;kkk
+		mov	bh,100+3+45
+		call	VLineDraw
+
+		mov	al,COL_HUD
+		mov	cx,160-4
+		mov	dx,160+4
+		mov	bl,100-2+45
+		call	HLineDraw
+
+		mov	al,COL_HUD
+		mov	cx,160-2
+		mov	dx,160+2
+		mov	bl,100+2+45
+		call	HLineDraw
+
+zx2:	
 
 ;---------------
 ;* init viewport
@@ -200,7 +251,7 @@ MapCompass	PROC	FAR
 ;--------------------------------
 ;* draw circumference graduations
 ;--------------------------------
-
+        		
 		mov	cx,32
 
 		xor	ax,ax		;0 .. 496 step 16
@@ -211,12 +262,18 @@ GradLoop:	push	ax
 		call	VSetRotation
 
 		mov	Xe[0],0
-		mov	Ye[0],30
+		mov	Ye[0],30 ;30
 
 		call	VDotClip
 		jc	@F		;non-visible ->
 
+		cmp NVG_set,1
+		je setcolhud4
 		mov	al,COL_COMPASS
+		jmp zx4
+setcolhud4:		
+		mov	al,COL_HUD
+zx4:		
 		call	SetPixel
 
 @@:		pop	cx
@@ -247,7 +304,13 @@ GradLoop:	push	ax
 		call	VQuickLineClip
 		jc	@F		;non-visible ->
 
+		cmp NVG_set,1
+		je setcolhud5	
 		mov	al,COL_COMPASS
+		jmp zx5
+setcolhud5:		
+		mov	al,COL_HUD
+zx5:		
 		mov	cx,XCrt[0]
 		mov	bl,YCrt[0]
 		mov	dx,XCrt[2]
@@ -262,7 +325,13 @@ GradLoop:	push	ax
 		call	VQuickLineClip
 		jc	@F		;non-visible ->
 
+		cmp NVG_set,1
+		je setcolhud6	
 		mov	al,COL_COMPASS
+		jmp zx6
+setcolhud6:		
+		mov	al,COL_HUD
+zx6:		
 		mov	cx,XCrt[0]
 		mov	bl,YCrt[0]
 		mov	dx,XCrt[2]
@@ -277,7 +346,13 @@ GradLoop:	push	ax
 		call	VQuickLineClip
 		jc	@F		;non-visible ->
 
+		cmp NVG_set,1
+		je setcolhud7		
 		mov	al,COL_COMPASS
+		jmp zx7
+setcolhud7:		
+		mov	al,COL_HUD
+zx7:		
 		mov	cx,XCrt[0]
 		mov	bl,YCrt[0]
 		mov	dx,XCrt[2]
@@ -294,7 +369,13 @@ GradLoop:	push	ax
 		call	VQuickLineClip
 		jc	@F		;non-visible ->
 
+		cmp NVG_set,1
+		je setcolhud8		
 		mov	al,COL_COMPASS
+		jmp zx8
+setcolhud8:		
+		mov	al,COL_HUD
+zx8:		
 		mov	cx,XCrt[0]
 		mov	bl,YCrt[0]
 		mov	dx,XCrt[2]
@@ -311,7 +392,13 @@ GradLoop:	push	ax
 		call	VQuickLineClip
 		jc	@F		;non-visible ->
 
+		cmp NVG_set,1
+		je setcolhud9
 		mov	al,COL_COMPASS
+		jmp zx9
+setcolhud9:		
+		mov	al,COL_HUD
+zx9:		
 		mov	cx,XCrt[0]
 		mov	bl,YCrt[0]
 		mov	dx,XCrt[2]
@@ -328,7 +415,13 @@ GradLoop:	push	ax
 		call	VQuickLineClip
 		jc	@F		;non-visible ->
 
+		cmp NVG_set,1
+		je setcolhud10
 		mov	al,COL_COMPASS
+		jmp zx10
+setcolhud10:		
+		mov	al,COL_HUD
+zx10:
 		mov	cx,XCrt[0]
 		mov	bl,YCrt[0]
 		mov	dx,XCrt[2]

@@ -4102,7 +4102,6 @@ DrawStandby	PROC	NEAR
 		mov	bl,HUD_Y_ORG+2
 		mov	al,COL_SIGHT
 		call	SetPixel
-
 		ret
 
 DrawStandby	ENDP

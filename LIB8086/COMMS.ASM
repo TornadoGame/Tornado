@@ -118,14 +118,14 @@ CommsVector	DB	0,0		;comms interrupt wrt device
 
 ;* transmit queue (cyclic)
 
-TxQHead		DB	255 dup(0)	;transmit queue
+TxQHead		DB	0 dup(0)	;transmit queue
 TxQTail		DB	0
 TxQWtPtr	DW	OFFSET TxQHead	;tx queue write pointer
 TxQRdPtr	DW	OFFSET TxQHead	;tx queue read pointer
 
 ;* receive queue (cyclic)
 
-RxQHead		DB	255 dup(0)	;receive queue
+RxQHead		DB	0 dup(0)	;receive queue
 RxQTail		DB	0
 RxQWtPtr	DW	OFFSET RxQHead	;rx queue write pointer
 RxQRdPtr	DW	OFFSET RxQHead	;rx queue read pointer

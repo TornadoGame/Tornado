@@ -371,8 +371,8 @@ WpnKillDrone	PROC	FAR
 
 		cmp	si,OFFSET M_MOBILE
 		jne	SkipPlayerKill
-
-		SHAKE	SHAKE_DAMAGE,HSHAKE_HI,VSHAKE_HI,50
+        
+		SHAKE	SHAKE_DAMAGE,HSHAKE_HI,VSHAKE_HI,50 ;ori
 
 ;* check no collisions enabled
 
@@ -409,12 +409,40 @@ WpnKillDrone	PROC	FAR
 
 ;* look up die flag wrt weapon type
 
-ContPlayerKill:	mov	bx,WPN_Weapon.WPN_TYPE
-		shr	bx,1
-		mov	al,TornadoWpnDie[bx]
+ContPlayerKill:	
+        ;mov	bx,WPN_Weapon.WPN_TYPE
+		;shr	bx,1
+		;mov	al,TornadoWpnDie[bx]
 
-		DESTROY	al,TOTAL_DAMAGE
-
+		;DESTROY	al,TOTAL_DAMAGE
+		call	MaxDamage
+		call	MaxDamage
+		call	MaxDamage
+		call	MaxDamage
+		call	MaxDamage
+		call	MaxDamage
+		call	MaxDamage		
+		call	MaxDamage
+		call	MaxDamage
+		call	MaxDamage	
+		call	MaxDamage
+		call	MaxDamage
+		call	MaxDamage
+		call	MaxDamage
+		call	MaxDamage
+		call	MaxDamage
+		call	MaxDamage		
+		call	MaxDamage
+		call	MaxDamage
+		call	MaxDamage			
+		call	MaxDamage
+		call	MaxDamage
+		call	MaxDamage
+		call	MaxDamage
+		call	MaxDamage		
+		call	MaxDamage
+		call	MaxDamage
+		call	MaxDamage		
 		jmp	ExitKill
 
 ;--------------------------
