@@ -1,0 +1,280 @@
+
+                                 CREF.DOC
+
+                  (C) Copyright Microsoft Corporation, 1992
+
+     This file contains information on the purpose and use of the
+     Microsoft(R) Cross-Reference Utility (CREF) Version 6.00.
+
+
+================================< Contents >================================
+
+ This file has 4 parts:
+
+               Part     Contents
+               ----     --------
+               1        Introduction
+
+               2        Using CREF
+
+               3        Reading Cross-Reference Listings
+
+               4        Difference from Previous Releases
+
+
+
+==========================< Part 1: Introduction >==========================
+
+ The Microsoft Cross-Reference Utility (CREF) creates a cross-reference
+ listing of all symbols in an assembly-language program.  A cross-reference
+ listing is an alphabetical list of symbols followed by references to
+ where a symbol appears in the source code.
+
+ CREF is intended for use as a debugging aid to speed up the search for
+ symbols encountered during a debugging session.  The cross-reference
+ listing, together with the symbol table created by the assembler, can make
+ debugging and correcting a program easier.
+
+
+============================< Part 2: Using CREF >==========================
+
+ CREF creates a cross-reference listing for a program by converting PWB
+ Source Browser database files (those ending with a BSC or an SBR
+ extension) into a readable ASCII file.
+
+    Command-Line Syntax
+    -------------------
+
+        CREF crossreferencefile [, crossreferencelisting] [;]
+
+            crossreferencefile      Source Browser database file. Default
+                                    filename extension is BSC.
+
+            crossreferencelisting   Readable ASCII cross-reference listing.
+                                    Default filename extension is REF. If
+                                    this filename is not supplied on the
+                                    command line, the base filename of the
+                                    database file is used and the REF
+                                    extension is added.
+
+    Using Prompts to Create a Cross-Reference Listing
+    -------------------------------------------------
+    You can direct CREF to prompt you for the files it needs by starting
+    CREF with just the command name (CREF).  CREF prompts you for the
+    input it needs by displaying the following lines, one at a time:
+
+        Cross-Reference [.BSC]:
+        Listing [filename.REF]:
+
+    The prompts correspond to the fields of the CREF command lines. CREF
+    waits for you to respond to each prompt before printing the next one.
+    You must type a cross-reference filename (extension is optional) at
+    the first prompt.  For the second prompt, you can either type a
+    filename or press the ENTER key to accept the default displayed in
+    brackets after the prompt.
+
+
+    Use of PWBRMAKE with CREF
+    -------------------------
+    Note that the CREF utility can create reports only from the final form
+    of the Source Browser database files.  These files end in BSC (Browser
+    Source Cache), and are created by the utility PWBRMAKE. Because ML
+    creates an intermediate Source Browser file (with the filename extension
+    SBR), CREF will invoke PWBRMAKE to create a BSC file from a single SBR
+    file input.  PWBRMAKE takes as input the SBR files created by ML,
+    merges them with other SBR files created from other assembly-language
+    source modules (if any exist), and creates a BSC file as the result.
+    The BSC file contains all of the information (across multiple modules,
+    if necessary) to provide a comprehensive cross-listing file for an entire
+    project.
+
+    CREF will invoke PWBRMAKE only when a single SBR file is given as input
+    to the utility; therefore, you must create a BSC database file from
+    the assembler-generated SBR files before invoking CREF.  An example
+    of running PWBRMAKE is:
+
+        PWBRMAKE FILENAME.SBR FILE2.SBR FILE3.SBR ... FILEN.SBR
+
+    This example creates a BSC file using the base name of the first SBR
+    file on the command line.  In this case, the resultant file would be
+    named FILENAME.BSC.
+
+    By using the BSC Source Browser database files, CREF is able to provide
+    cross-reference files for either a single assembly-language module or
+    for an entire multimodule assembly-language project.  Below are the
+    steps necessary for both scenarios.
+
+    For more information on PWBRMAKE and its available switches, see the
+    "Tools" section of the Macro Assembler Reference manual, or type PWBRMAKE /?
+    at the command line to get a quick-reference screen.
+
+
+    Creating Single-Module Cross-Reference Listings
+    -----------------------------------------------
+       - Using ML with the /FR switch, create an SBR file for the
+         assembly-language module.  An example is:
+
+            ML /c /FR filename.ASM
+
+         This creates a file FILENAME.SBR (as well as FILENAME.OBJ).
+
+       - Invoke CREF using the database file created above (FILENAME.SBR)
+         as the input cross-reference file.  An example of this is:
+
+            CREF FILENAME.SBR, FILENAME.REF
+
+         This creates the cross-reference listing FILENAME.REF.
+
+         Note that because CREF is capable only of reading Source Browser BSC
+         database files, the PWBRMAKE utility is automatically invoked to 
+         convert the SBR on the command line into a BSC file.
+
+
+    Creating Multimodule Cross-Reference Listings
+    ----------------------------------------------
+       - Using ML with the /FR switch, create an SBR file for each of the
+         assembly-language modules.  An example is:
+
+            ML /c /FR *.ASM
+
+         This creates a file FILENAME.SBR (as well as FILENAME.OBJ).
+
+       - Invoke CREF using the database file created above (FILENAME.BSC)
+         as the input cross-reference file.  An example of this is:
+
+            CREF FILENAME.BSC, FILENAME.REF
+
+         The cross-reference listing FILENAME.REF is created.  This
+         particular example will have all of the symbols from all
+         of the modules in one cross-reference listing file.
+
+
+=================< Part 3: Reading Cross-Reference Listings  >==============
+
+ The cross-reference listing contains the name of each symbol defined in
+ your program.  Each name is followed by a list of source filenames in
+ which the symbol appears.  Each source name is then followed by a list of
+ line numbers representing the line or lines in the source file in which a
+ symbol is referenced.
+
+ Line numbers in which a symbol is defined are marked with the number sign (#).
+
+    Example
+    -------
+    Below is a sample assembly-language source-code module, followed by
+    the resulting cross-reference listing file.
+
+                    .DOSSEG
+                    .MODEL small, os_dos, pascal
+
+                    .STACK 100h
+
+                    .DATA
+                    PUBLIC message, lmessage
+
+        message     BYTE    "Hello World!!!!"
+        lmessage    EQU     $-message
+
+                    .CODE
+
+                    .STARTUP
+
+                    EXTERN display:NEAR
+                    call   display
+                    mov    ax, 4C00h
+                    int    21h
+
+                    .EXIT
+                    END
+
+
+    Example Reference Listing (Created from above source-code module)
+    -----------------------------------------------------------------
+
+        Microsoft Cross-Reference  Version 6.00       Mon Nov 18 15:47:26 1991
+
+
+          Symbol Cross-Reference       (#  definition)  Cref-1
+
+        @code
+            ..\hello.asm . . . . . . . .    2#
+
+        @CodeSize
+            ..\hello.asm . . . . . . . .    2#
+
+        @data
+            ..\hello.asm . . . . . . . .    2#
+
+        @DataSize
+            ..\hello.asm . . . . . . . .    2#
+
+        @fardata
+            ..\hello.asm . . . . . . . .    2#
+
+        @fardata?
+            ..\hello.asm . . . . . . . .    2#
+
+        @Interface
+            ..\hello.asm . . . . . . . .    2#
+
+        @Model
+            ..\hello.asm . . . . . . . .    2#
+
+        @stack
+            ..\hello.asm . . . . . . . .    2#
+
+        @Startup
+            ..\hello.asm . . . . . . . .   14#
+
+        _DATA
+            ..\hello.asm . . . . . . . .    2#
+
+        _TEXT
+            ..\hello.asm . . . . . . . .    2#    12
+
+        DGROUP
+            ..\hello.asm . . . . . . . .    2#     2     14
+
+        display
+            ..\hello.asm . . . . . . . .   16     17
+            <Unknown>. . . . . . . . . .    1#
+
+        hello.asm
+            ..\hello.asm . . . . . . . .    1#
+
+        lmessage
+            ..\hello.asm . . . . . . . .   10#     7
+
+        message
+            ..\hello.asm . . . . . . . .    9#    10      7
+
+        STACK
+            ..\hello.asm . . . . . . . .    4#
+
+
+=================< Part 4: Difference from Previous Releases >==============
+
+
+   Use Differences
+   ---------------
+
+    - ML/MASM no longer generates a CRF assembler-specific binary file.
+      Instead, CREF 6.0 uses the generic Source Browser database file (BSC).
+
+      Because of this, CREF can actually be used with any source-code module
+      or project that is compiled/assembled by a Microsoft product that
+      creates SBR files.
+
+      Creating multimodule cross-reference listing files is another advantage
+      of using BSC Browser database files.  Previous releases of CREF were
+      limited to single modules.
+
+
+   Listing Differences
+   -------------------
+
+    - All line numbers that are reported are relative to the actual source-
+      code module, not the assembler-generated listing file.  This is a
+      direct result of using the Source Browser database files (BSC).  These
+      files are not directly related to MASM listings and are generic
+      across Microsoft language products.

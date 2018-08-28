@@ -1,0 +1,21 @@
+
+ Start  Stop   Length Name                   Class
+ 00000H 001FFH 00200H STACK                  STACK
+ 00200H 00522H 00323H DATA                   DATA
+ 00523H 00558H 00036H CODE                   CODE
+
+  Address         Publics by Name
+
+ 0052:001A       BREAK
+ 0020:0000       DUMP
+ 0020:0309       DUMP2
+ 0052:0003       VGA
+
+  Address         Publics by Value
+
+ 0020:0000       DUMP
+ 0020:0309       DUMP2
+ 0052:0003       VGA
+ 0052:001A       BREAK
+
+Program entry point at 0052:0003

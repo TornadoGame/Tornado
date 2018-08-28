@@ -1,0 +1,354 @@
+
+                               SMARTDRV.DOC File
+
+                  (C) Copyright Microsoft Corporation, 1992
+
+
+================================< Contents >=================================
+
+  
+     This file has 2 parts:
+  
+               Part     Contents
+               ----     --------
+               1        Using the SMARTDRV.EXE Disk-Caching Program
+
+               2        Additional Notes
+
+
+
+=============< Part 1: Using the SMARTDRV.EXE Disk-Caching Program >=========
+
+     Microsoft Macro Assembler includes SMARTDRV.EXE version 4.0, a
+     sophisticated block-oriented disk-caching program that significantly
+     improves assembly and link times. SMARTDRV.EXE is not required by MASM,
+     but it can reduce the amount of time your computer spends reading data
+     from your hard disk. SMARTDRV.EXE replaces the older version,
+     SMARTDRV.SYS, and is compatible with all versions of Windows 3.x.
+
+     SMARTDRV.EXE sets aside some expanded or extended memory as a cache for
+     its own use. SMARTDRV.EXE uses this disk cache to store the information
+     read from the hard disk when an application needs information from your
+     hard disk. When an application attempts to read additional information
+     from the hard disk, the SMARTDRV.EXE program supplies the information
+     directly from its cache instead. If you are using RAMDRIVE.SYS to create
+     one or more RAM drives, and are limiting the memory assigned to
+     SMARTDRV.EXE as a result, you can increase system speed by reassigning
+     some or all of the memory away from the RAM drive and adding it to the
+     memory available to SMARTDRV.EXE.
+
+     SMARTDRV.EXE automatically loads itself into HMA under MS-DOS 5.0 if
+     EMM386.EXE is loaded and upper-memory blocks are available as a result of
+     a DOS=UMB or DOS=UMB,HIGH command in your CONFIG.SYS file. SMARTDRV.EXE
+     can also be loaded into HMA with third-party memory managers such as
+     386-Max.
+
+     SMARTDRV.EXE must be specified in both your AUTOEXEC.BAT file and
+     CONFIG.SYS file because there are actually two device drivers in a single
+     file: a double-buffer driver and a disk cache. The double-buffer driver is
+     installed in CONFIG.SYS, and the cache component of SMARTDRV.EXE is
+     installed in AUTOEXEC.BAT. Some disk controllers do not need double
+     buffering; using this option when you do not need it results in a small
+     performance penalty. Therefore, once your system is running with
+     SMARTDRV.EXE, type:
+
+        SMARTDRV
+
+     at the command-line prompt. SMARTDRV.EXE displays disk-cache status
+     information about your system that looks like this:
+
+        Microsoft SMARTDrive Disk Cache version 4.0
+        Copyright 1991,1992 Microsoft Corp.
+
+        Cache size: 1,048,576 bytes
+        Cache size while running Windows: 1,048,576 bytes
+
+                        Disk Caching Status
+            drive   read cache   write cache   buffering
+            --------------------------------------------
+              A:       yes           no           no
+              B:       yes           no           no
+              C:       yes           yes          yes
+              D:       yes           yes          -
+
+            For help, type "Smartdrv /?".
+
+
+     Note
+     ----
+     If every line in the Buffering column is No, then you can safely remove
+     the DEVICE statement for SMARTDRV.EXE from your CONFIG.SYS file.
+
+     SMARTDRV.EXE always copies data to your hard disk when you turn off  your
+     computer. It also writes all data to the disk when an application calls
+     the MS-DOS reset disk function. If you want to force data to be written to
+     disk, use the /C command-line option. If you use a third-party program to
+     reboot your machine from a batch file, you should make sure you have
+     SMARTDRV /C in the batch file prior to the reboot command. Failure to do
+     so may cause data loss.
+
+     You can use command-line options to control the size of the cache element
+     (/E) and the size of the read-ahead buffer (/B). The read-ahead buffer is
+     additional information that SMARTDRV.EXE reads when the application reads
+     information from the hard disk. The size must be specified in bytes, and
+     the element size must be one of the following: 1024, 2048, 4096, or 8192.
+     The read-ahead buffer must be a multiple of the element size, cannot be
+     less than the element size, and cannot exceed 32768. The defaults are 8192
+     for the element size and 16384 for the read-ahead buffer. Because these
+     will occupy conventional or UMB memory space, making them larger reduces
+     the memory MS-DOS applications have available.
+
+     You can start the SMARTDRV.EXE program by typing SMARTDRV at the MS-DOS
+     prompt before you start Windows, or by placing a command line in your
+     AUTOEXEC.BAT file. The syntax is:
+
+        [[drive:]] [[path]]SMARTDRV.EXE[[ [[drive[[+|-]] ]]...]]
+                                  [[/E:ElementSize]] [[InitCacheSize]]
+                                  [[WinCacheSize]] ]] [[/B:BufferSize]]
+                                  [[/C]] [[/R]] [[/L]] [[ /Q]] [[/S]] [[/?]]
+
+
+     The following list describes the command-line options available for
+     SMARTDRV.EXE:
+
+     drive
+     -----
+     Specify the letter of the disk drive for which you want to
+     control caching. If you don't specify a drive letter, floppy disk
+     drives are read-cached but not write-cached, hard disk drives
+     are read- and write-cashed, and CD-ROM and network drives
+     are ignored. You can specify multiple disk drives.
+
+     path
+     ----
+     Specify the location of the SMARTDRV.EXE file.
+
+     + | -
+     -----
+     Enable (+) or disable (-) caching. Use the plus (+) and minus (-)
+     signs to override the default settings. If you specify a drive let-
+     ter without a plus or minus sign, read-caching is enabled and
+     write-caching is disabled. If you specify a drive letter followed
+     by a plus sign (+), read- and write-caching are enabled. If you
+     specify a drive letter followed by a minus sign(-), read- and
+     write-caching are disabled.
+
+     /E:ElementSize
+     --------------
+     Specify in bytes the amount of the cache SMARTDRV.EXE
+     moves at a time. This must be greater than or equal to 1, and a
+     power of 2. The default value is 8K.
+
+     InitCacheSize
+     -------------
+     Specify the size in kilobytes of the cache when
+     SMARTDRV.EXE starts (before Windows is running). The
+     size of the disk cache affects SMARTDRV.EXE's efficiency. In
+     general, the larger the cache, the less often SMARTDRV.EXE
+     needs to read information from the disk, which speeds up your
+     system's performance. If you do not specify an InitCacheSize
+     value, SMARTDRV.EXE sets the value according to how
+     much memory your system has (see the list following this list).
+
+     WinCacheSize
+     ------------
+     Limit the amount (in kilobytes) Windows can reduce the cache
+     size. Windows reduces the size of the cache to recover memory
+     for its own use. Windows and SMARTDRV.EXE then cooper-
+     ate to provide optimum use of your system memory. When you
+     quit Windows, Windows restores the cache to its normal size.
+     The default value depends on how much available memory
+     your system has (see the list following this list). If you specify a
+     value for InitCacheSize that is smaller than the value specified
+     for WinCacheSize, InitCacheSize is set to the same size as
+     WinCacheSize.
+
+     /B:BufferSize
+     -------------
+     Specify the size of the read-ahead buffer. The next time the
+     application is to read information from that file, it can read it
+     from memory instead. The default size of the read-ahead buffer
+     is 16K. Its value can be any multiple of ElementSize.
+
+     /C
+     --
+     Write all cached information from memory to the hard disk.
+     SMARTDRV.EXE writes information from memory to the hard
+     disk at times when other disk activity has slowed. You might
+     use this option if you are going to turn off your computer, and
+     you want to make sure all cached information has been written
+     to the hard disk.
+
+     /R
+     --
+     Clear the contents of the existing cache and restart
+     SMARTDRV.EXE.
+
+     /L
+     --
+     Prevent SMARTDRV.EXE from loading into upper-memory
+     blocks (UMBs), even if there are UMBs available. You can use
+     this option of you are using MS-DOS version 5.0 or later and
+     UMBs are enabled.
+
+     /Q
+     --
+     Prevent the display of SMARTDRV.EXE information on your
+     screen.
+
+     /S
+     --
+     Display additional information about the status of
+     SMARTDRV.EXE.
+
+     /?
+     --
+     Display online Help about the SMARTDRV.EXE command
+     and options.
+
+
+     The following list shows the default values for InitCacheSize and
+     WinCacheSize, depending on the amount of available extended memory on your
+     computer.
+
+     Extended Memory   <= 1 MB     <=2 MB     <=4 MB    <=6 MB    <=6 MB
+
+     InitCacheSize     All         1 MB        1 MB      2 MB     2 MB
+     WinCacheSize      Zero        256K        512K      1 MB     2 MB
+
+
+     Note
+     ----
+     Do not put the SMARTDRV.EXE cache in the expanded memory provided by
+     EMM386.EXE. EMM386.EXE uses extended memory to emulate expanded memory
+     that other programs can use. Although SMARTDRV.EXE can use this emulated
+     expanded memory for its cache, it may not make your program run as quickly
+     as it would using extended memory.
+
+     Because the optimal cache size for SMARTDRV.EXE depends on the programs
+     you run, and on your system configuration, there is no single best
+     setting. You should experiment to find the best cache size for your system
+     after saving a copy of your CONFIG.SYS file. For more information, see
+     your Windows User's Guide.
+
+
+=========================< Part 2: Additional Notes >=========================
+
+
+     Avoiding Data Loss When Using SMARTDRV.EXE
+     ------------------------------------------
+
+     SMARTDRV.EXE does not write data to disk immediately. If your computer
+     should crash after the time data is written to the cache and before
+     the data is written to the disk, data can be lost. Issuing the
+     following command causes SMARTDRV to write all data in the cache to
+     the disk:
+
+     SMARTDRV /c
+
+
+     Setup May Not Detect Foreign Disk Cache
+     ---------------------------------------
+     Setup may install SMARTDRV.EXE if it does not detect the foreign 
+     disk cache installed on your system. Remove the DEVICE statements 
+     for SMARTDRV.EXE from your AUTOEXEC.BAT and CONFIG.SYS files to 
+     resolve this problem.
+
+
+     Programs That May Be Incompatible with SMARTDRV.EXE
+     ---------------------------------------------------
+
+     The following applications may be incompatible with SMARTDRV.EXE,
+     version 4.0:
+
+     - The Disk Protect feature in Norton Utilities version 6.0
+
+       Do not use the Disk Protect feature in Disk Monitor. If you do,
+       you will encounter an error and your system may hang if you try
+       to write to the protected drive. If you want to write to and
+       cache a protected drive, use the Norton cache program when using
+       Disk Monitor.
+
+     - The Calibrate program in Norton Utilities version 6.01
+
+       Calibrate fails on the Disk Mapping test if SMARTDRV is enabled.
+
+     - DoubleDisk from Vertisoft
+
+       Do not enable write-behind caching for DoubleDisk compressed
+       partitions.
+
+     - Storage Dimensions SCSI Driver (SSTOR.SYS)
+
+       Using the SSTOR.SYS driver, the SCSI drive appears corrupted when
+       SMARTDRV is loaded. The disk's contents are not altered, but they
+       are inaccessible when using SMARTDRV.
+
+     The following drivers, installed in a CONFIG.SYS file, are
+     incompatible with SMARTDRV.EXE version 4.0:
+
+     - The SuperStor utility from Addstor (SSTORDRV.SYS)
+
+       Do not use the Create Mountable Drive or Mount and Dismount features
+       of SuperStor after SMARTDRV is loaded. You must configure your
+       SuperStor partitions before loading SMARTDRV. If your AUTOEXEC.BAT
+       file includes "mount" configuration commands, make sure that the
+       SMARTDRV command line follows the SuperStor configuration command
+       lines.
+
+       Also, you will receive read-write errors if you use SMARTDRV to
+       cache a SuperStor compressed drive. To prevent SMARTDRV from
+       caching the compressed drive, you must include the driver letter-
+       option on the SMARTDRV command line.
+
+       For example, if drive C is the uncompressed drive, and drives E
+       and F are the compressed SuperStor drives, you would type the
+       following command line or include it in your AUTOEXEC.BAT file:
+
+       smartdrv e- f-
+
+     - The network driver from DNA Networks Inc. (STATION.SYS)
+
+       Using both STATION.SYS and SMARTDRV may cause your system to hang.
+
+     - Versions prior to version 7.x of the driver for the
+       Bernoulli Box (RCD.SYS)
+
+       The RCD.EXE program requires that driver RCD.SYS be installed to
+       use the Bernoulli Box. When SMARTDRV is running, RCD.EXE does
+       not recognize that RCD.SYS has been installed.
+
+     - The Norton Antivirus utility (NAV_.SYS and NAV&.SYS)
+
+       The NAV_.SYS and NAV&.SYS drivers for the Norton Antivirus utility
+       may generate "Not enough memory" errors or hang your system when
+       loading SMARTDRV.EXE. One workaround is to use the /L command-line
+       option to load SMARTDRV.EXE into low memory. An alternative is using
+       the /B option with NAV&.SYS to avoid the NAV&.SYS bug that causes
+       your system to hang.
+
+     The following driver, installed in an AUTOEXEC.BAT file, is
+     incompatible with SMARTDRV.EXE version 4.0:
+
+     - DataMonitor version 7.1 by PC Tools (DATAMON.*)
+
+       Loading DataMonitor after SMARTDRV is installed may cause your
+       system to hang.
+
+=============================================================================
+
+     Microsoft, MS, MS-DOS, and CodeView are registered trademarks, and
+     Windows is a trademark of Microsoft Corporation.
+
+     386-Max is a trademark of Qualitas, Inc.
+
+     Bernoulli Box is a trademark of Iomega Corporation.
+
+     Norton Utilities is a registered trademark of Peter Norton Computing.
+
+     SuperStor is a trademark and Addstor is a registered trademark of
+     Addstor, Inc.
+
+NOTE: Microsoft improves its languages documentation at the time of
+      reprinting, so some of the information in this file may already be
+      included in your manuals.

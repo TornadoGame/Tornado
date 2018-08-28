@@ -1,0 +1,344 @@
+                               CV.TXT File
+
+       Product Information for Microsoft(R) CodeView(TM), Version 4.01
+       Copyright (C) 1993, Microsoft Corporation.  All rights reserved.
+
+     This document contains release notes for version 4.01 of Microsoft
+     CodeView for MS-DOS(R) and Microsoft Windows(TM) operating systems.
+     For more information on Microsoft CodeView, see Part 2, "The CodeView
+     Debugger," in the MASM Environment and Tools book.
+
+
+     Access to Function Code in Libraries
+     ------------------------------------
+     The MASM CodeView debugger and linker do not guarantee that the
+     name of an .OBJ file is the same name the debugger or linker uses
+     to access the function code. To be certain of function access, use
+     the /f option when compiling. To avoid problems, do not put code in
+     include files. If you do put code into include files, specify the
+     function as inline.
+
+
+     Application I/O When Debugging Can Cause Screen Corruption
+     ----------------------------------------------------------
+     If an application executes an I/O operation when the Flip/Swap
+     option is OFF, the screen may be corrupted.
+
+
+     .COM Files
+     ----------
+     CodeView 4.01 does not show source code when debugging .COM files.  
+     If you need to view source code, build your program as a small-model 
+     .EXE for debugging purposes.
+
+
+     Debugging Applications that Use a Mouse
+     ---------------------------------------
+     If you are using CV.EXE in a Windows MS-DOS session, and if you are
+     debugging an application that uses or alters the mouse, you must
+     specify the CodeView /M option to disable the mouse. This option is
+     necessary because the DPMI services provided by Windows 3.x in
+     enhanced mode do not allow for correctly saving and restoring the 
+     mouse state.
+
+
+     Debugging Code that Uses 32-Bit Registers
+     -----------------------------------------
+     CodeView 4.01 does not support single-stepping through code that
+     uses 32-bit registers while a DPMI server is present.  Windows 3.1
+     and 386-MAX are examples of DPMI servers.  If you need to single-
+     step through 32-bit code, set breakpoints and use the F8 key for 
+     single-stepping, or use an alternate debugger such as WDEB386 
+     (available in the Microsoft Windows Software Development Kit).
+     
+
+     Debugging Locally on an 80286
+     -----------------------------
+     To run CodeView with Windows and debug locally on an 80286 computer,
+     the following files must be installed on the host computer:
+
+     - CVW4.EXE (CodeView kernel)
+     - EEW0CXX.DLL (C++ expression evaluator)
+     - EEW0CAN.DLL (ANSI C expression evaluator)
+     - SHW0.DLL (symbol handler)
+     - EMW0W0.DLL (Windows-Windows execution model)
+     - TLW0LOC.DLL (local transport layer)
+     - TOOLHELP.DLL (Toolhelp)
+
+
+     Disable the Minimize On Use Option When Debugging
+     -------------------------------------------------
+     Running an application in CodeView for Windows can disable mouse and 
+     keyboard control if the Minimize On Use option is set in the Windows 
+     Program Manager.  This behavior occurs if you run an application 
+     using F5, restart from the Run menu, and begin to debug the 
+     application. To recover from this problem, use CTRL+ALT+SysRq to 
+     stop the application, issue the WKA command from within Codeview for 
+     Windows, and choose Exit from the File menu to return to Windows.
+
+     
+     MS-DOS Session Running in a Window Does Not Have Mouse Support
+     --------------------------------------------------------------
+     Running CodeView with the /2 option in an MS-DOS session window does
+     not have mouse support. If you want mouse support, change the
+     MS-DOS session to full screen.
+
+
+     Recovering from "Internal Debugger Error"
+     -----------------------------------------
+     If CodeView generates an "Internal debugger error," restart your
+     system.
+
+
+     Remote Debugging with CodeView
+     ------------------------------
+     The required files needed on the host and the remote debugging
+     machine are operating-system dependent.
+
+     For running CodeView under MS-DOS, the following files must be
+     installed on the MS-DOS host. These files are needed for all
+     execution models:
+
+     - CV.EXE (CodeView kernel)
+     - SHD1.DLL (symbol handler)
+     - EED1CXX.DLL or EED1CAN.DLL (C++ expression evaluator or ANSI C
+       expression evaluator. Only one is needed, but EED1CXX.DLL
+       is required for programming with C++.  EED1CXX.DLL is the only
+       expression evaluator provided with MASM.)
+
+     For remote debugging, you need to include the following statements in 
+     the [RCVCOM] section of your TOOLS.INI file:
+
+     parameters: com1:9600
+
+     or specify the command line:
+
+     RCVCOM [-p com1:4800] [-r] [-?]
+
+     where [ ] represents an optional parameter. See page 370 in the
+     Environment and Tools book for a description of these parameters.
+
+     Remote debugging has three limitations:
+
+     - You must specify that the shell be exclusive.
+
+     - The recommended baud rate is 9600. If you experience any problems,
+       try decreasing the baud rate.
+
+     - The shell should be specified as full-screen.
+
+     Specify these settings in a .PIF file or in an MS-DOS session. Use 
+     the Settings command to specify these settings in an MS-DOS shell.
+
+     If you install a CodeView DLL in a directory other than the one 
+     in which Setup installs it, specify the path of the DLL with the 
+     appropriate entry in your TOOLS.INI file. For example:
+
+     SYMBOLHANDLER:C:\CV4\SHD1.DLL
+
+     See also "Configuring CodeView with TOOLS.INI" on page 301, and
+     "Remote Debugging" on page 367, both in the Environment and Tools
+     book.
+
+     The following four sections describe additional files you need for
+     specific hosts and targets.
+
+
+          DOS-Hosted, DOS-Targeted Debugging: Host Computer
+          -------------------------------------------------
+          If you are not doing remote debugging, these additional files
+          must be installed on the host computer for DOS-hosted,
+          DOS-targeted debugging:
+
+          - EMD1D1.DLL (DOS host/DOS target execution model)
+          - TLD1LOC.DLL (local transport layer)
+
+          If you are doing remote debugging, these additional files must
+          be installed on the host computer for DOS-hosted, DOS-targeted
+          debugging:
+
+          - EMD1D1.DLL (DOS host/DOS target execution model)
+          - TLD1COM.DLL (COM port transport layer)
+
+          To specify these transport options, use the TRANSPORT statement
+          in your TOOLS.INI file. The path must be specified as follows:
+
+          TRANSPORT:C:\CV4\DLL\TLD1COM.DLL COM1:9600
+
+          If you do not specify COM#:baud_rate in the TRANSPORT statement,
+          CodeView prompts you for this information.
+
+          You must also add the Native entry to your TOOLS.INI file, giving
+          the execution model. The path is required:
+
+          NATIVE:C:\CV4\EMD1D1.DLL (for DOS host/DOS target execution model)
+
+
+          DOS-Hosted, DOS-Targeted Debugging: Target Computer
+          ---------------------------------------------------
+          If you are doing remote DOS-hosted, DOS-targeted debugging, the 
+          following file must be installed on the target computer:
+
+          - RCVCOM.EXE (remote CodeView for COM port)
+
+
+          DOS-Hosted, Windows-Targeted Debugging: Host Computer
+          -----------------------------------------------------
+          If you are doing remote debugging, these additional files must be
+          installed on the host computer for DOS-hosted, Windows-targeted
+          debugging:
+
+          - EMD1W0.DLL (DOS host/Windows target execution model)
+          - TLD1COM.DLL (COM port transport layer)
+
+
+          DOS-Hosted, Windows-Targeted Debugging: Target Computer
+          -------------------------------------------------------
+          If you are doing remote debugging, the following additional files 
+          must be installed on the target computer for DOS-hosted, Windows-
+          targeted debugging:
+
+          - RCVWCOM.EXE (remote CodeView for COM port)
+          - DMW0.EXE (debug monitor on Windows target)
+          - TOOLHELP.DLL (Toolhelp)
+
+
+     Removing CodeView 3.07 from SDK Program Manager Group
+     -----------------------------------------------------
+     You can safely remove CodeView 3.07 from your SDK Program Manager 
+     group to avoid confusion with the CodeView for Windows provided 
+     with MASM or Microsoft C/C++.
+
+
+     Running CodeView on an 80286 Computer
+     -------------------------------------
+     To run CVW on an 80286 computer, delete CVW.EXE and rename CVW4.EXE as
+     CVW.EXE. Local debugging on an 80286 computer with an EGA adapter
+     requires a secondary monitor. Single-screen debugging is not supported.
+     Local debugging on an EGA system requires CodeView to be invoked with the 
+     /2 command-line option.
+
+
+     Running Screen-Saver Programs While Debugging
+     ---------------------------------------------
+     Do not run screen savers such as Idlewild or AfterDark while debugging; 
+     their interactions with Windows can cause problems when debugging.
+
+
+     Setting the Scope of the Show Address Option in CodeView
+     --------------------------------------------------------
+     The printed documentation and Help incorrectly list the
+     syntax for setting the scope of the Show Address option in
+     the CodeView Command window (OL) as
+
+          OL[<scope>]
+
+     instead of
+
+          OL[[<scope>][+|-]].
+
+     The + and - switches can be used to turn other options on or
+     off, but will cause a syntax error if used to modify the scope
+     of the Show Address option.
+
+     You can choose several options for the OL command at the same time.
+     Each time you use the OL command, the scopes you specify will be
+     turned on and the scopes you don't specify will be turned off.
+     The OL command does not toggle the scopes. For example, the command
+
+          ollfg
+
+     turns on lexical, function, and global scope while it turns off module
+     and executable scope.
+
+
+     .STARTUP Code
+     -------------
+     When CodeView information is generated in mixed-mode assembly, it
+     is possible for CodeView .STARTUP code to be misplaced. For 
+     example, from the source code
+
+     .MODEL SMALL, C
+     .STACK
+     .CODE
+             .STARTUP
+             mov ax,0
+             .EXIT
+     END
+
+     you would expect the following output:
+     
+     1:    .MODEL SMALL,C
+     2:    .STACK
+     3:    .CODE
+     4:            .STARTUP
+     214F:0000 BA5021         MOV       DX,2150
+     214F:0003 8EDA           MOV       DS,DX
+     214F:0005 8CD3           MOV       BX,SS
+     214F:0007 2BDA           SUB       BX,DX
+     214F:0009 D1E3           SHL       BX,1
+     214F:000B D1E3           SHL       BX,1
+     214F:000D D1E3           SHL       BX,1
+     214F:000F D1E3           SHL       BX,1
+     214F:0011 FA             CLI
+     214F:0012 8ED2           MOV       SS,DX
+     214F:0014 03E3           ADD       SP,BX
+     214F:0016 FB             STI
+     5:            mov ax,0
+     214F:0017 B80000         MOV       AX,0000
+     6:            .EXIT
+     
+     However, you will see the following:
+     
+     1:    .MODEL SMALL,C
+     2:    .STACK
+     3:    .CODE
+     4:            .STARTUP
+     5:            mov ax,0
+     214F:0000 BA5021         MOV       DX,2150
+     214F:0003 8EDA           MOV       DS,DX
+     214F:0005 8CD3           MOV       BX,SS
+     214F:0007 2BDA           SUB       BX,DX
+     214F:0009 D1E3           SHL       BX,1
+     214F:000B D1E3           SHL       BX,1
+     214F:000D D1E3           SHL       BX,1
+     214F:000F D1E3           SHL       BX,1
+     214F:0011 FA             CLI
+     214F:0012 8ED2           MOV       SS,DX
+     214F:0014 03E3           ADD       SP,BX
+     214F:0016 FB             STI
+     214F:0017 B80000         MOV       AX,0000
+     6:            .EXIT
+     
+     Note that line 5 has moved; however, the code will still run correctly.
+
+
+     Unloading DLLs When CodeView Terminates
+     ---------------------------------------
+     You may have applications that use the LoadLibrary function to load
+     DLLs to be used by the application. When CVW.EXE terminates or
+     restarts such applications, Windows terminates the application without
+     unloading DLLs or decrementing the DLL usage count. As a result, DLLs
+     still exist in the system. To unload DLLs, you must either exit
+     Windows and restart, or use a utility.
+
+
+     Unsuccessful Connection to Remote Terminal
+     ------------------------------------------
+     A remote monitor may appear to hang (the screen clears except for 
+     the CodeView sign-on banner) when connecting to it from a host computer
+     that is running the debug kernel. In order to resolve this situation, 
+     retry the connection when the debug kernel is not running on the 
+     host computer.
+
+
+===========================================================================
+
+
+     Microsoft, MS, MS-DOS, and CodeView are registered trademarks, and
+     Windows is a trademark of Microsoft Corporation.  386-MAX is a
+     trademark of Qualitas Corporation.
+
+     NOTE: Microsoft improves its languages documentation at the time of
+     reprinting, so some of the information in this file may already be
+     included in your manuals.

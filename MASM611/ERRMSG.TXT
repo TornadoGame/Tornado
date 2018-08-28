@@ -1,0 +1,290 @@
+		     Notes on MASM 6.11 Error Messages
+		     (c) Copyright Microsoft Corp. 1993
+
+     
+     This text file contains information on the following:
+     
+     - 32-bit Linker Errors
+     - ML Errors Update
+     - Microsoft MS-DOS Extender Run-Time Errors
+
+=============================================================================
+     
+     32-Bit Linker Errors
+     --------------------
+     If you attempt to assemble a 16-bit executable file, but call the 
+     32-bit version of LINK, you will receive a LNKnnnn error message. 
+     The following output example illustrates specifically which error 
+     messages you may receive:
+	  
+	  **********************************************************
+	  Microsoft (R) 32-Bit Executable Linker Version 1.0
+	  Copyright (C) Microsoft Corp 1992-93. All rights reserved.
+
+	  /z2
+	  "afile.obj"
+	  "afile.exe"
+	  NUL
+	  LINK : warning LNK4044: unrecognized option "z2"; ignored
+	  LINK : warning LNK4044: unrecognized option "r"; ignored
+	  LINK : error LNK1104: cannot open file "afile.exe"
+	  **********************************************************
+     
+     You may also receive the warning
+
+	  cvtomf() : warning : 16-bit segment
+
+     If you are building a 16-bit executable file, use the LINK.EXE 
+     included with MASM 6.11. If you have the directories for both the 
+     16-bit and 32-bit linkers included in your PATH, the directory 
+     containing the 16-bit LINK.EXE must be listed before the directory 
+     containing the 32-bit linker.
+
+
+     ML Errors Update
+     ----------------
+     The following is updated information on ML error messages. The
+     complete list of assembler error messages is located in Appendix A
+     of the MASM Environment and Tools book.
+
+	  A1004: out of memory
+
+		 The assembler could not load the file because all memory 
+		 is exhausted. For ML.EXE to run with the Microsoft Windows 
+		 operating system, a Windows swap file must exist.
+
+
+	  A1018: COFF error writing file
+		 
+		 The assembler was unable to write to an output file. One
+		 of the following may be the cause:
+
+		 - The current disk is full.
+		 - The current disk is read-only.
+		 - The disk you are writing to is not ready.
+
+	  
+	  A1019: invalid debug and browser data; file exceeds line limit 
+			  
+		 The assembler cannot generate debug or browse information 
+		 on an OMF file longer than 32,767 lines, or on a coff file
+		 longer than 65,553 lines.
+	    
+		 To eliminate this error:
+
+		 - Break the file up into smaller pieces (each having less 
+		   than 32,767 lines for OMF files, 65,553 for coff files) 
+		   and reassemble, or
+
+		 - Assemble without options /Zi, /Fr, or /FR.
+
+	  
+	  A1020: cannot find LINK.EXE
+
+		 This error occurs when LINK.EXE cannot be found on the 
+		 path. Placing LINK.EXE on the path will resolve this error.
+
+ 
+	  A1021: cannot find cvpack.exe
+
+		 This error occurs when CVPACK.EXE cannot be found on the 
+		 path. Placing CVPACK.EXE on the path will resolve this 
+		 error.
+
+
+	  A2210: 16-bit segments not allowed with /coff option
+
+		 You have attempted to compile a 16-bit segment module with
+		 the /coff option. Remove the /coff switch from your command
+		 line and recompile.
+		 
+
+	  A2211: FAR not allowed in flat-model comm variables
+
+		 The assembler has detected a FAR directive in a flat-model
+		 program. The FAR directive is irrelevant for flat-model 
+		 programs and should be removed.
+
+
+	  A2212: invalid .model parameter for flat model
+	  
+		 The assembler has detected nearstack or farstack 
+		 directives in a flat-model program. These directives are 
+		 irrelevant for flat-model programs and should be removed.
+	  
+
+	  A4014: directive ignored with /coff switch
+
+		 Directives .SEQ, .ALPHA, and .DOSSEG are ignored when 
+		 assembling with the /coff switch. These directives have no 
+		 effect and should be removed from flat-model code.
+
+
+	  A4015: /Gc switch incompatible with flat model
+
+		 The /Gc switch is incompatible when assembling a flat-
+		 model program. The switch was ignored.
+
+
+	  A4016: /AT switch incompatible with flat model
+
+		 The /AT switch is incompatible when assembling a flat-
+		 model program. The switch was ignored. 
+		 
+	  
+	  A4017: invalid command-line option: /<option>
+
+		 ML has detected a command-line option that is invalid.
+		 The option was removed and ML compiled as it normally
+		 would.
+
+
+	  A5006: calling convention not supported in flat model
+
+		 ML has detected a calling convention not supported in 
+		 flat-model programs. The convention was ignored.
+
+
+     Microsoft MS-DOS Extender Run-Time Errors
+     -----------------------------------------
+     The MASM assembler, ML.EXE, is a 32-bit MS-DOS-extended program. An
+     MS-DOS Extender error can occur when you run ML. MS-DOS Extender 
+     errors have the following format:
+
+     DOSXNT : error DXnnnn: message
+
+
+	  DX1020: unhandled exception: exception; contact Microsoft 
+		  Support Services
+
+		  A problem exists in ML.EXE. Additional information 
+		  appears after this error message. Note the circumstances 
+		  of the error and notify Microsoft Corporation by 
+		  following the instructions in the "Microsoft Support 
+		  Services" section in the Microsoft MASM Environment and 
+		  Tools book.
+
+
+	  DX1070: GODOSXNT.EXE stub out of date
+
+		  ML is not compatible with the version of DOSXNT.EXE 
+		  available. A compatible version of the Microsoft DOSXNT 
+		  MS-DOS Extender (DOSXNT.EXE) must exist in the same 
+		  directory or in a directory specified in the PATH 
+		  environment variable.
+
+		  This error can result when Microsoft MASM 6.11 is 
+		  installed in the same directory as another language 
+		  product. Try reinstalling MASM 6.11 in a different 
+		  directory.
+
+
+	  DX1140: DOSXNT.386 driver required to run with Windows
+
+		  For ML.EXE to run with the Microsoft Windows operating 
+		  system, the driver called DOSXNT.386 must be specified 
+		  in the [386Enh] section of the SYSTEM.INI file as 
+		  follows:
+
+		  DEVICE=<path>\DOSXNT.386
+
+		  where <path> is the directory that contains the 
+		  DOSXNT.386 file.
+
+
+	  DX1180: cannot load program : <reason>
+
+		  The MS-DOS Extender could not load ML.EXE for the given 
+		  reason. The message describing the reason can be one of 
+		  the following:
+
+		  - access denied to file
+		       Change the access rights for the file.
+
+		  - invalid or corrupted .EXE file
+		       Contact Microsoft Support Services.
+
+		  - out of memory
+		       Remove some TSRs or add more memory.
+
+		  - too many open files
+		       Either close some files or increase the number of 
+		       file handles specified in the FILES= statement in 
+		       CONFIG.SYS.
+
+
+	  DX1230: DOSXNT initialization failed
+
+		  This error usually follows error DX5420.
+
+
+	  DX1270: command-line error : unknown command switch
+
+		  This error occurs if one of the following environment 
+		  variables is set: G, GO, GOT, GOTN, GOTNT, T, TN, TNT. 
+     
+		  To see the current settings of environment variables, run 
+		  the SET command at the operating system prompt. To clear 
+		  an environment variable, run the command SET variable=, 
+		  where variable is the name of the variable to be cleared; 
+		  no other characters can appear before you press ENTER. 
+		  Changes in environment variables must be made outside of 
+		  Windows. Check the AUTOEXEC.BAT file for environment 
+		  variable settings.
+
+
+	  DX1350: cannot load program: file not found
+
+		  This error occurs if one of the following environment 
+		  variables is set: G, GO, GOT, GOTN, GOTNT, T, TN, TNT.
+
+		  To see the current settings of environment variables, 
+		  run the SET command at the operating system prompt. To 
+		  clear an environment variable, run the command SET 
+		  variable=, where variable is the name of the variable to 
+		  be cleared; no other characters can appear before pressing 
+		  ENTER. Changes in environment variables must be made 
+		  outside of Windows. Check the AUTOEXEC.BAT file for 
+		  environment variable settings.
+
+     
+	  DX1390: cannot load program
+
+		  DOSXNT cannot load the executable file because all memory 
+		  is exhausted. For ML.EXE to run with the Microsoft Windows 
+		  operating system, a Windows swap file must exist.
+
+
+	  DX5420: CheckDPMI: error when checking for coprocessor support
+
+		  For ML.EXE to run with the Microsoft Windows operating 
+		  system, the following must be specified in the [386Enh] 
+		  section of SYSTEM.INI:
+     
+		  DEVICE=*vmcpd
+
+	  
+	  Phar Lap err 58: Can't create VM swap file of size 0 in 
+		  directory T:\
+
+		  where T:\ is a read-only network drive. This error
+		  may occur in the MS-DOS environment (outside of Windows)
+		  when ML.EXE is located on a read-only network share.
+		  To avoid this error, you can do one of the following:
+
+		  - Set the DOSX environment variable to "-novm" as
+		    follows:
+		  
+		    set dosx=-novm
+
+		    This instructs the dos extender not to use VM.
+
+		  - Set the DOSX environment variable to "-swapdir 
+		    c:\<dir>" as follows:
+		  
+		    set dosx=-swapdir c:\<dir>
+		    
+		    where <dir> is a directory on drive C:. This instructs 
+		    the MS-DOS Extender to put the swap file in the 
+		    specified directory.
+

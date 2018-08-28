@@ -1,0 +1,15 @@
+
+ Start  Stop   Length Name                   Class
+ 00000H 001FFH 00200H STACK                  STACK
+ 00200H 0020FH 00010H DATA                   DATA
+ 00210H 00286H 00077H CODE                   CODE
+
+  Address         Publics by Name
+
+ 0021:0000       MEMSIZE
+
+  Address         Publics by Value
+
+ 0021:0000       MEMSIZE
+
+Program entry point at 0021:0000

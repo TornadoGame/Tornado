@@ -1,0 +1,853 @@
+                   Notes on Intel(R) Pentium(TM) Processor
+                     (c) Copyright Microsoft Corp. 1993
+
+
+  This file contains the following information:
+  
+  - Implementation of the .586 and .586P directives
+  - New instructions for the Intel(R) Pentium(TM) processor
+  - Pentium clock cycles for all instructions
+
+=============================================================================  
+
+  .586 and .586P Directives
+  -------------------------
+  The .586 directive enables assembly of non-privileged instructions 
+  available for the Pentium processor. The .586P directive enables 
+  privileged instructions in addition to the non-privileged instructions
+  for the Pentium.
+
+  The following example demonstrates implementation of the .586 directive.
+     
+  .model small, C
+  .586
+
+  .data
+  ; .586  gives 110100111111y = 0D3Fh
+  ; .586p gives 110110111111y = 0DBFh
+  var1 dw @cpu
+
+  IF  @Cpu AND 0100000y
+      %echo Pentium instructions enabled.
+  ELSE
+      %echo Pentium instructions Not enabled.
+  ENDIF
+
+  end
+
+     
+=============================================================================
+
+  New Pentium Instructions
+  ------------------------
+  The new Pentium instructions are extensions to the Intel486 instruction 
+  set; for information on instructions for the 8086, 8088, 80286, 80386, 
+  and 80486 processors, see Chapter 4, "Processor," in the Microsoft MASM 
+  Reference. For additional information on the new Pentium instructions,
+  refer to you Intel documentation.
+
+
+CMPXCHG8B       Compare and Exchange 8 Bytes
+
+  Compares the 64-bit value in EDX:EAX with a 64-bit value in memory. If 
+  they are equal, the 64-bit value in memory is replaced by the value in 
+  ECX:EBX. Otherwise, the value in memory is loaded into EDX:EAX.
+
+  Flags:  The ZF flag is set if the destination operand and EDX:EAX are 
+  equal; otherwise it is cleared. The CF, PF, AF, SF, and OF flags are 
+  unaffected.
+
+  Encoding:  00001111 11000111 mod 001 r/m
+           
+  Syntax                  Example                 Clock Cycles  
+  ------                  -------                 -----------
+  CMPXCHG8B reg,mem64     cmpxchg8b ax,[bx]       10  
+
+
+-----------------------------------------------------------------------------
+CPUID           CPU Identification
+
+  Syntax:  CPUID
+
+  Provides information to the software about the model of microprocessor 
+  on which it is executing. An input value loaded into the EAX register
+  for this instruction indicates what information should be returned by
+  the CPUID instruction. 
+  
+  Following execution of the CPUID instruction with zero in EAX, the EAX
+  register contains the highest input value understood by the CPUID 
+  instruction. For the Pentium, the value in EAX will be 1. Also included
+  in this output is a vendor identification string contained in EBX, EDX,
+  and ECX. EBX contains the first four characters, EDX the next four, and
+  ECX the last four. For Intel processors, the vendor identification string
+  is "GenuineIntel".
+
+  Following execution of the CPUID instruction with input value 1 in EAX,
+  EAX[3:0] contains the stepping ID of the microprocessor, EAX[7:4] 
+  contains the model (the first model will be indicated by 0001B) and
+  EAX[11:8] contains the family (5 for the Pentium). EAX[31:12], EBX, and
+  ECX are reserved. The Pentium processor sets the feature register, EDX,
+  to 1BFH, indicating which features the Pentium supports. A feature flag
+  set to 1 indicates that the corresponding feature is supported.
+  
+  Flags:  No flags affected.
+
+  Encoding:  00001111 10100010
+
+  Syntax                  Example                 Clock Cycles  
+  ------                  -------                 -----------
+  CPUID                   cpuid                   14
+
+
+-----------------------------------------------------------------------------
+MOV             Move to/from Control Registers
+
+  Store or load the Control Registers (CR0, CR2, CR3, CR4) to or from a 
+  general purpose register.
+
+  Flags:  The OF, SF, ZF, AF, PF, and CF flags are undefined.
+
+  Encoding:  00001111 00100010 11 eee reg  (Move to Control Register)
+
+  Syntax                  Example                 Clock Cycles  
+  ------                  -------                 -----------
+  MOV reg32,controlreg    mov cr0,eax             22
+                          mov cr2,eax             12
+                          mov cr3,eax             21,46
+                          mov cr4,eax             14
+
+
+  Encoding:  00001111 00100000 11 eee reg  (Move from Control Register)
+
+  Syntax                  Example                 Clock Cycles  
+  ------                  -------                 -----------
+  MOV controlreg,reg32    mov eax,cr0             4
+
+
+-----------------------------------------------------------------------------
+RDMSR           Read from Model-Specific Register
+
+  The value in ECX specifies one of the 64-bit Model-Specific Registers of
+  the Pentium processor. The content of that Model-Specific Register is 
+  copied into EDX:EAX. EDX is loaded with the high-order 32 bits, and EAX 
+  is loaded with the low-order 32 bits.
+
+  Flags:  No flags affected.
+
+  Encoding:  00001111 00110010
+
+  Syntax                  Example                 Clock Cycles  
+  ------                  -------                 -----------
+  RDMSR                   rdmsr                   20-24
+
+
+-----------------------------------------------------------------------------
+RDTSC           Read from Time Stamp Counter
+
+  Copies the contents of the Time Stamp Counter (TSC) into EDX EAX. (The 
+  Pentium maintains a 64-bit Time Stamp Counter (TSC) that is incremented 
+  every clock cycle.) When the Current Privilege Level is 0, the state of 
+  the TSD bit in CR4 does not affect the operation of this instruction. 
+  When the CPL is equal to 1, 2, or 3, the TSC may be read only if the TSD 
+  bit in CR4 is 0. Only a supervisor level program may modify the value of 
+  the TSC.
+
+  Flags:  No flags affected.
+
+  Encoding:  00001111 00110001
+
+  Syntax                  Example                 Clock Cycles  
+  ------                  -------                 -----------
+  RDTSC                   rdtsc                   6, 11
+
+
+-----------------------------------------------------------------------------
+RSM             Resume from System Management Mode
+
+  The processor state is restored from the dump created upon entrance to
+  System Management Mode. However, the contents of the model-specific
+  registers are not affected. The processor leaves SMM and returns control
+  to the interrupted application or operating system. If the processor 
+  detects any invalid state information, it enters the shutdown state.
+
+  Flags:  All flags are affected.
+
+  Encoding:  00001111 10101010
+
+  Syntax                  Example                 Clock Cycles  
+  ------                  -------                 -----------
+  RSM                     rsm                     83
+
+
+-----------------------------------------------------------------------------
+WRMSR           Write to Model-Specific Register
+
+  The value in ECX specifies one of the 64-bit Model-Specific Registers of
+  the Pentium processor. The content of EDX:EAX is copied to that Model-
+  Specific Register. The high-order 32 bits are copied from EDX, and the
+  low-order 32 bits are copied from EAX.
+
+  Flags:  No flags affected.
+
+  Encoding:  00001111 00110000
+
+  Syntax                  Example                 Clock Cycles  
+  ------                  -------                 -----------
+  WRMSR                   wrmsr                   30-45
+
+
+=============================================================================
+
+  Pentium Clock Cycles
+  --------------------
+  The following table contains clock cycles information for all Intel 
+  Pentium processor instructions. For more detailed information on clock 
+  cycles for these instructions, see your Intel documentation. For more 
+  general information on these instructions, see Chapter 4, "Processor," 
+  and Chapter 5, "Coprocessor," in the Microsoft MASM Reference.
+
+
+Instruction Syntax      Example                         Clock Cycles
+------------------      -------                         ------------
+AAA                     aaa                             3
+
+AAD                     aad                             10
+
+AAM                     aam                             18
+
+AAS                     aas                             3
+
+ADC reg,reg             adc dx,cx                       1
+ADC mem,reg             adc WORD PTR m16[2],dx          3
+ADC reg,mem             adc dx,DWORD PTR m32[2]         2
+
+ADD reg,reg             add ax,bx                       1
+ADD mem,reg             add total, cx                   3
+ADD reg,mem             add cx,incr                     2
+ADD reg,immed           add bx,6                        1
+ADD mem,immed           add pointers[bx][si],6          3
+ADD accum,immed         add ax,10                       1
+
+AND reg,reg             and dx,bx                       1
+AND mem,reg             and bitmask,bx                  3
+AND reg,mem             and bx,masker                   2
+AND reg,immed           and dx,0F7h                     1
+AND mem,immed           and masker,100lb                3
+AND accum,immed         and ax,0B6h                     1
+
+ARPL reg,reg            arpl ax,cx                      pm=7
+ARPL mem,reg            arpl selector,dx                pm=7
+
+BOUND reg16,mem32       bound di,base-4                 8 (within bounds);
+                                                        int+32 (out of bounds)
+BOUND reg32,mem64       bound di,base-4                 8 (within bounds);
+                                                        int+32 (out of bounds)
+
+BSF reg16,reg16         bsf cx,bx                       6-34
+BSF reg32,reg32         bsf cx,bx                       6-42
+BSF reg16,mem16         bsf ecx,bitmask                 6-35
+BSF reg32,mem32         bsf ecx,bitmask                 6-43
+
+BSR reg16,reg16         bsr cx,dx                       7-39
+BSR reg32,reg32         bsr cx,dx                       7-71
+BSR reg16,mem16         bsr eax,bitmask                 7-40
+BSR reg32,mem32         bsr eax,bitmask                 7-72
+
+BSWAP reg32             bswap ebx                       1
+
+BT reg16,immed8*        bt ax,4                         4
+BT mem16,immed8*        bt [bx],4                       4
+BT reg16,reg16*         bt ax,bx                        4
+BT mem16,reg16*         bt [bx],dx                      9
+* Operands can also be 32 bits 
+
+BTC reg16,immed8*       btc edi,4                       7
+BTC mem16,immed8*       btc color[di],4                 8
+BTC reg16,reg16*        btc eax,ebx                     7
+BTC mem16,reg16*        btc [bp+8],si                   13
+* Operands can also be 32 bits 
+
+
+BTR reg16,immed8*       btr bx,17                       7
+BTR mem16,immed8*       btr [bx],27                     8
+BTR reg16,reg16*        btr cx,di                       7
+BTR mem16,reg16*        btr rotate,cx                   13
+* Operands can also be 32 bits 
+
+BTS reg16,immed8*       bts ax,4                        7
+BTS mem16,immed8*       bts maskit,4                    8
+BTS reg16,reg16*        bts bx,ax                       7
+BTS mem16,reg16*        bts flags[bx],cx                13
+* Operands can also be 32 bits 
+
+CALL label              call upcase                     1
+                        call distant                    4
+CALL reg                call ax                         2
+CALL mem32              call [bx]                       2
+CALL mem32              call DWORD PTR [bx]             5
+
+CBW                     cbw                             3
+
+CDQ                     cdq                             2
+
+CLC                     clc                             2
+
+CLD                     cld                             2
+
+CLI                     cli                             7
+
+CLTS                    clts                            10
+
+CMC                     cmc                             2
+
+CMP reg,reg             cmp dl,cl                       1
+CMP mem,reg             cmp array[si],bl                2
+CMP reg,mem             cmp bh,array[si]                2
+CMP reg,immed           cmp bx,24                       1
+CMP mem,immed           cmp tester,4000                 2
+CMP accum,immed         cmp ax,1000                     1
+
+CMPS [segreg:] src,
+ [ES:] dest             cmps source,es:dest             5
+
+CMPSB [[segreg:[src,]
+ ES:] dest]             cmpsb                           5
+
+CMPSW [[segreg:[src,]
+ ES:] dest]             cmpsw                           5
+ 
+CMPSD [[segreg:[src,]
+ ES:] dest]             cmpsd                           5
+
+CMPXCHG mem,reg         cmpxchg string,bl               6
+CMPXCHG reg,reg         cmpxchg bx,cx                   6
+
+CMPXCHG8B reg,mem64     cmpxchg8b ax,[bx]               10
+
+CPUID                   cpuid                           14
+
+CWD                     cwd                             2
+
+CWDE                    cwde                            3
+
+DAA                     daa                             3
+
+DAS                     das                             3
+
+DEC reg                 dec ax                          1
+DEC mem                 dec counter                     3
+
+DIV reg                 div cx                          byte=17, word=25,
+DIV mem                 div [bx]                        dword=41
+
+ENTER immed16,0         enter 4,0                       11
+ENTER immed16,1         enter 0,1                       15
+ENTER immed16,immed8    enter 6,4                       15+2imm8
+
+F2XM1                   fm2xi                           13-57
+
+FABS                    fabs                            1
+
+FADD [reg,reg]          fadd                            3, 1
+FADD memreal            fadd shortreal                  3, 1
+FADDP reg,ST            faddp st(6),st                  3, 1
+FIADD memint            fiadd int16                     7, 4
+
+FBLD membcd             fbld packbck                    48-58
+
+FBSTP membcd            fbstp bcds[bx]                  148-154
+
+FCHS                    fchs                            1
+
+FCLEX                   fclex                           9+
+FNCLEX                  fnclex                          9
+
+FCOM                    fcom                            4, 1
+FCOMP                   fcomp                           4, 1
+FCOMPP                  fcompp                          4, 1
+FICOM memint            ficom double                    8, 4
+FICOMP memint           ficomp darray[di]               8, 4
+
+FCOS                    fcos                            18-124
+
+FDECSTP                 fdecstp                         1
+
+FDIV [reg,reg]          fdiv st(5),st                   39                           
+FDIV memreal            fdiv longreal                   39
+FDIVP reg,ST            fdivp st(6),st                  39
+FIDIV memint            didiv warray[di]                42
+
+FDIVR [reg,reg]         fdivr st(5),st                  39                           
+FDIVR memreal           fdivr longreal                  39
+FDIVRP reg,ST           fdivrp st(6),st                 39
+FIDIVR memint           didivr warray[di]               42
+
+FFREE ST(i)             ffree st(3)                     1
+
+FILD memint             fild quads[si]                  3, 1
+
+FINCSTP                 fincstp                         1
+
+FINIT                   finit                           16
+FNINIT                  fninit                          12
+
+FIST memint             fist doubles[8]                 6
+FISTP memint            fistp longint                   6
+
+FLD reg                 fld st(3)                       1
+FLD mem32real           fld longreal                    1
+FLD mem64real                                           1
+FLD mem80real                                           3
+
+FLD1                    fld1                            2
+FLDZ                    fldz                            2
+FLDPI                   fldpi                           5, 3
+FLDL2E                  fldl2e                          5, 3
+FLDL2T                  fldl2t                          5, 3
+FLDLG2                  fldlg2                          5, 3
+FLDLN2                  fldln2                          5, 3
+
+FLDCW mem16             fldcw ctrlword                  7
+
+FLDENV mem              fldenv [bp+10]                  37, 16-bit pm=32,                 
+                                                        32-bit pm=33
+
+FMUL [reg,reg]          fmul st(5),st                   3, 1
+FMULP reg,ST            fmulp st(6),st                  3, 1
+FIMUL memint            fimul warray[di]                7, 4
+
+FNOP                    fnop                            1
+
+FPATAN                  fpatan                          17-173
+
+FPREM                   fprem                           16-64
+FPREM1                  fprem1                          20-70
+
+FPTAN                   fptan                           17-173
+
+FRNDINT                 frndint                         9-20
+
+FRSTOR mem              frstor [bp-94]                  16-bit rm or vm=75;
+                                                        32-bit rm or vm=95; 
+                                                        pm=70
+
+FSAVE mem               fsave [bp-94]                   16-bit rm or vm=127+;
+                                                        32-bit rm or vm=151+;
+                                                        pm=124+
+
+FNSAVE mem              fnsave [bp-94]                  16-bit rm or vm=127;
+                                                        32-bit rm or vm=151;
+                                                        pm=124
+
+FSCALE                  fscale                          20-31
+
+FSIN                    fsin                            16-126
+
+FSINCOS                 fsincos                         17-137
+
+FSQRT                   fsqrt                           70
+
+FST reg                 fst st                          1
+FST memreal             fst longs[bx]                   2
+FSTP reg                fstp st(3)                      1
+FSTP mem32real          fstp longreal                   2
+FSTP mem64real                                          2
+FSTP mem80real                                          3
+
+FSTCW mem16             fstcw ctrlword                  2+
+FNSTCW mem16            fnstcw ctrlword                 2
+
+FSTENV mem              fstenv [bp-14]                  16-bit rm or vm=50+;
+                                                        32-bit rm or vm=48+;
+                                                        16-bit pm=49+;
+                                                        32-bit pm=50+
+FNSTENV mem             fnstenv [bp-14]                 16-bit rm or vm=50;
+                                                        32-bit rm or vm=48;
+                                                        16-bit pm=49;
+                                                        32-bit pm=50
+
+FSTSW mem16             fstsw statword                  2+
+FSTSW AX                fstsw ax                        2+
+FNSTSW mem16            fnstsw statword                 2
+FNSTSW AX               fnstsw ax                       2
+
+FSUB [reg,reg]          fsub st,st(2)                   3, 1
+FSUB memreal            fsub longreal                   3, 1
+FSUBP reg,ST            fsubp st(6),st                  3, 1
+FISUB memint            fisub double                    7, 4
+
+FSUBR [reg,reg]         fsubr st,st(2)                  3, 1
+FSUBR memreal           fsubr longreal                  3, 1
+FSUBRP reg,ST           fsubrp st(6),st                 3, 1
+FISUBR memint           fisubr double                   7, 4
+
+FTST                    ftst                            4, 1
+
+FUCOM [reg]             fucom st(2)                     4, 1
+FUCOMP [reg]            fucomp st(7)                    4, 1
+FUCOMPP                 fucompp                         4, 1
+
+FWAIT                   fwait                           1-3
+
+FXAM                    fxam                            21
+
+FXCH [reg]              fxchg st(3)                     1
+
+FXTRACT                 fxtract                         13
+
+FYL2X                   fyl2x                           22-111
+
+FYL2XP1                 fyl2xp1                         22-103
+
+HLT                     hlt                             12
+
+IDIV reg                idiv dl                         8-bit=22; 16-bit=30;
+IDIV mem                idiv itemp                      32-bit=46
+
+IMUL reg                imul dx                         11                
+IMUL mem                imul factor                     11
+IMUL reg,immed          imul cx,25                      10
+IMUL reg,reg,immed      imul dx,ax,18                   10
+IMUL reg,mem,immed      imul bx,[si],60                 10
+IMUL reg,reg            imul cx,ax                      10
+IMUL reg,mem            imul dx,[si]                    10
+
+IN accum,immed          in ax,60h                       7, pm=4,21*, vm=19
+IN accum,DX             in ax,dx                        7, pm=4,21*, vm=19
+(*First protected mode timing: CPL < or = IOPL. Second timing: CPL > IOPL.)
+
+INC reg                 inc bx                          1                                                 
+INC mem                 inc vpage                       3
+
+INS [ES:]dest, DX       ins es:instr,dx                 9, pm=6,24*, vm=22
+INSB                    insb                            9, pm=6,24*, vm=22
+INSW                    insw                            9, pm=6,24*, vm=22
+INSD                    insd                            9, pm=6,24*, vm=22
+(*First protected mode timing: CPL < or = IOPL. Second timing: CPL > IOPL.)
+
+INT immed8              int 25h                         16, pm=31,48*
+INT 3                   int 3                           13, pm=27,44*
+INTO                    into                            13, pm=27,44*
+(*First protected mode timing is for interrupts to the same privilege
+level. The second is for interrupts to a higher privilege level.)
+
+INVD                    invd                            15
+
+INVLPG                  invlpg es:entry                 25
+
+IRET                    iret                            8*,10, pm=27
+IRETD                   iretd                           10, pm=27
+IRETF                   iretf
+IRETDF                  iretdf
+(* Real or V86 mode.)
+
+Jcondition label        je next                         1
+JCXZ label              jcxz not found                  6,5
+JECXZ label                                             6,5
+
+JMP label               jmp NEAR PTR distant            1
+                        jmp distant                     3
+JMP reg16               jmp ax                          2
+JMP mem16               jmp table[di]                   2
+JMP reg32               jmp eax                         3
+JMP mem32               jmp fpointer[si]                2
+JMP mem48               jmp FWORD PTR [di]              4
+
+LAHF                    lahf                            2
+
+LAR reg,reg             lar ax,bx                       8
+LAR reg,mem             lar cx,selector                 8
+
+LDS reg,mem             lds si,fpointer                 4
+LES reg,mem             les di,fpointer                 4
+LFS reg,mem             lfs edi,fpointer                4
+LGS reg,mem             lgs bx,fpointer                 4
+LSS reg,mem             lss bp, fpointer                4, pm=8
+
+LEA reg,mem             lea bx,npointer                 1
+
+LEAVE                   leave                           3
+
+LGDT mem48              lgdt descriptor                 6
+LIDT mem48              lidt descriptor                 6
+LLDT reg16              lldt ax                         9
+LLDT mem16              lldt selector                   9
+
+LMSW reg16              lmsw ax                         8
+LMSW mem16              lmsw machine                    8
+
+LOCK                    lock                            1
+
+LODS [segreg:]src       lods es:source                  2                           
+LODSB [[segreg:]src]    lodsb                           2
+LODSW [[segreg:]src]    lodsw                           2
+LODSD [[segreg:]src]    lodsd                           2
+
+LOOP label              loop wend                       5, 6
+LOOPE label             loope again                     7, 8
+LOOPZ label             loopz again                     7, 8
+LOOPNE label            loopne for_next                 7, 8
+LOOPNZ label            loopnz for_next                 7, 8
+
+LSL reg,reg             lsl ax,bx                       8             
+LSL reg,mem             lsl cx,seg_lim                  8
+
+LTR reg16               ltr ax                          10
+LTR mem16               ltr task                        10
+
+MOV reg,reg             mov bp,sp                       1
+MOV mem,reg             mov array[di],bx                1
+MOV reg,mem             mov bx,pointer                  1
+MOV mem,immed           mov [bx],15                     1
+MOV reg,immed           mov cx,256                      1
+MOV mem,accum           mov total,ax                    1
+MOV accum,mem           mov al,string                   1
+MOV segreg,reg16        mov ds,ax                       2, 3
+MOV segreg,mem16        mov es,psp                      2, 3
+MOV reg16,segreg        mov ax,ds                       1
+MOV mem16,segreg        mov stack_save,ss               1
+MOV reg32,controlreg    mov eax,cr0                     22
+                        mov eax,cr2                     12
+                        mov eax,cr3                     21, 46
+                        mov eax,cr4                     14
+MOV controlreg,reg32    mov cr0,eax                     4
+MOV reg32,debugreg      mov edx,dr0                     DR0-DR3,DR6,DR7=11;
+                                                        DR4,DR5=12 
+MOV debugreg,reg32      mov dr0,ecx                     DR0-DR3,DR6,DR7=11;
+                                                        DR4,DR5=12 
+                                                        
+MOVS [ES:]dest,
+ [segreg:]src           movs dest,es:source             4
+MOVSB [[ES:]dest,
+ [segreg:]src]          movsb                           4
+MOVSW [[ES:]dest,
+ [segreg:]src]          movsw                           4
+MOVSD [[ES:]dest,
+ [segreg:]src]          movsd                           4
+
+MOVSX reg,reg           movsx bx,al                     3
+MOVSX reg,mem           movsx eax,bsign                 3
+
+MOVZX reg,reg           movzx bx,al                     3
+MOVZX reg,mem           movzx eax,bunsign               3
+
+MUL reg                 mul bx                          8,16-bit=11;
+MUL mem                 mul WORD PTR [bx]               32-bit=10
+
+NEG reg                 neg ax                          1
+NEG mem                 neg balance                     3
+
+NOP                     nop                             1
+
+NOT reg                 not ax                          1
+NOT mem                 not masker                      3
+
+OR reg,reg              or ax,dx                        1
+OR mem,reg              or bits,dx                      3
+OR reg,mem              or dx,color[di]                 2
+OR reg,immed            or dx,110110b                   1
+OR mem,immed            or flag_rec,8                   3
+OR accum,immed          or ax,40h                       1
+
+OUT immed8,accum        out 60h,al                      12, pm=9,26, VM=24
+OUT DX,accum            out dx,ax                       12, pm=9,25  VM=24
+
+OUTS DX,[segreg:]src    outs dx,buffer                  13, pm=10,27, VM=24
+OUTSB [DX,[segreg:]src] outsb                           13, pm=10,27, VM=24
+OUTSW [DX,[segreg:]src] outsw                           13, pm=10,27, VM=24
+OUTSD [DX,[segreg:]src] outsd                           13, pm=10,27, VM=24
+
+POP reg                 pop cx                          1
+POP mem                 pop param                       3
+POP segreg              pop es                          3
+
+POPA                    popa                            5
+POPAD                   popad                           5
+
+POPF                    popf                            6, pm=4
+POPFD                   popfd                           6, pm=4
+
+PUSH reg                push dx                         1
+PUSH mem                push [di]                       2
+PUSH segreg             push es                         1
+PUSH immed              push 15000                      1
+
+PUSHA                   pusha                           5
+PUSHAD                  pushad                          5
+
+PUSHF                   pushf                           4, pm=3
+PUSHFD                  pushfd                          4, pm=3
+
+RCL reg,1               rcl dx,1                        1
+RCL mem,1               rcl WORD PTR [si],1             3
+RCL reg,CL              rcl dx,cl                       7-24
+RCL mem,CL              rcl masker,cl                   9-26
+RCL reg,immed8          rcl bx,5                        8-25
+RCL mem,immed8          rcl WORD PTR [bp+8],3           10-27
+RCR reg,1               rcr bl,1                        1
+RCR mem,1               rcr WORD PTR m32[0],1           3
+RCR reg,CL              rcr bl,cl                       7-24
+RCR mem,CL              rcl WORD PTR [bx=di],cl         9-26
+RCR reg,immed8          rcr si,9                        8-25
+RCR mem,immed8          rcr masker,3                    10-27
+ROL reg,1               rol ax,1                        1
+ROL mem,1               rol bits,1                      3
+ROL reg,CL              rol ax,cl                       4
+ROL mem,CL              rol color,cl                    4
+ROL reg,immed8          rol ax,13                       1
+ROL mem,immed8          rol BYTE PTR [bx],10            3
+ROR reg,1               ror ax,1                        1
+ROR mem,1               ror WORD PTR [bx],1             3
+ROR reg,CL              ror dx,cl                       4
+ROR mem,CL              ror color,cl                    4
+ROR reg,immed8          ror bl,3                        1
+ROR mem,immed8          ror bits,6                      3
+
+RDMSR                   rdmsr                           20-24
+
+REP INS dest,DX         rep ins dest,dx                 11+3n, pm=(8,25)+3n*
+REP MOVS dest,src       rep movs dest,source            6, 13n
+REP OUTS DX,src         rep outs dx,source              13+4n, pm=(10,27)+4n*
+REP LODS dest           rep lods dest                   7, 7+3n 
+REP STOS dest           rep stos dest                   6, 9+3n
+(*First protected mode timing: CPL < or = IOPL. Second timing: CPL > IOPL.)
+
+REPE CMPS src,dest      repe cmps src,dest              7, 9+4n
+REPE SCAS dest          repe scas dest                  7, 9+4n
+
+REPNE CMPS src,dest     repne cmps src,dest             7, 8+4n
+REPNE SCAS dest         repne scas dest                 7, 9+4n
+
+RETN                    retn                            2
+RETN immed16            retn 8                          3
+RETF                    retf                            4, 23
+RETF immed16            retf 32                         4, 23
+
+RSM                     rsm                             83
+
+SAHF                    sahf                            2
+
+SAL reg,1               sal bx,1                        1
+SAL mem,1               sal WORD PTR m32[0],1           3
+SAL reg,CL              sal ah,cl                       4
+SAL mem,CL              sal BYTE PTR [di],cl            4
+SAL reg,immed           sal cx,6                        1
+SAL mem,immed           sal array[bx+di],14             3
+SAR reg,1               sar di,1                        1
+SAR mem,1               sar count,1                     3
+SAR reg,CL              sar bx,cl                       4
+SAR mem,CL              sar sign,cl                     4
+SAR reg,immed           sar bx,5                        1
+SAR mem,immed           sar sign_count,3                3
+SHL reg,1               shl si,1                        1
+SHL mem,1               shl index,1                     3
+SHL reg,CL              shl di,cl                       4
+SHL mem,CL              shl index,cl                    4
+SHL reg,immed           shl di,2                        1
+SHL mem,immed           shl unsign,4                    3
+SHR reg,1               shr dh,1                        1
+SHR mem,1               shr unsign[di],1                3
+SHR reg,CL              shr dx,cl                       4
+SHR mem,CL              shr WORD PTR m32[2],cl          4
+SHR reg,immed           shr bx,8                        1
+SHR mem,immed           shr mem16,11                    3
+
+SBB accum,immed         sbb ax,320                      1
+SBB reg,immed           sbb dx,45                       1
+SBB mem,immed           sbb WORD PTR m32[2],40          3
+SBB reg,reg             sbb dx,cx                       1
+SBB mem,reg             sbb WORD PTR m32[2],dx          3
+SBB reg,mem             sbb dx,WORD PTR m32[2]          2
+
+SCAS [ES]dest           scas es:destin                  4
+SCASB                   scasb                           4
+SCASW                   scasw                           4
+SCASD                   scasd                           4
+
+SETcondition reg8       setc dh                         1
+SETcondition mem8       setle flag                      2 
+
+SGDT mem48              sgdt descriptor                 4
+SIDT mem48              sidt descriptor                 4
+
+SHLD reg16,reg16,immed8 shld ax,dx,10                   4
+SHLD reg32,reg32,immed8                                 
+SHLD mem16,reg16,immed8 shld bits,cx,5                  4
+SHLD mem32,reg32,immed8 
+SHLD reg16,reg16,CL     shld ax,dx,cl                   4
+SHLD reg32,reg32,CL             
+SHLD mem16,reg16,CL     shld masker,ax,cl               5
+SHLD mem32,reg32,CL
+
+SHRD reg16,reg16,immed8 shrd cx,si,3                    4
+SHRD reg32,reg32,immed8                                 
+SHRD mem16,reg16,immed8 shrd [di],dx,5                  4
+SHRD mem32,reg32,immed8 
+SHRD reg16,reg16,CL     shrd ax,dx,cl                   4
+SHRD reg32,reg32,CL             
+SHRD mem16,reg16,CL     shrd [bx],ax,cl                 5
+SHRD mem32,reg32,CL
+
+SLDT reg16              sldt ax                         2
+SLDT mem16              sldt selector                   2
+
+SMSW reg16              smsw ax                         4
+SMSW mem16              smsw machine                    4
+
+STC                     stc                             2
+
+STD                     std                             2
+
+STI                     sti                             7
+
+STOS [ES:]dest          stor es:dstring                 3
+STOSB [[ES:]dest]       stosb                           3
+STOSW [[ES:]dest]       stosw                           3
+STOSD [[ES:]dest]       stosd                           3
+
+STR reg16               str cx                          2
+STR mem16               str taskreg                     2
+
+SUB reg,reg             sub ax,bx                       1
+SUB mem,reg             sub array[di],bi                3
+SUB reg,mem             sub al,[bx]                     2
+SUB reg,immed           sub bl,7                        1
+SUB mem,immed           sub total,4000                  3                   
+SUB accum,immed         sub ax,32000                    1
+
+TEST reg,reg            test dx,bx                      1
+TEST mem,reg            test flags,dx                   2
+TEST reg,immed          test cx,30h                     1
+TEST mem,immed          test masker,1                   2
+TEST accum,immed        test ax,90h                     1
+
+VERR reg16              verr ax                         7
+VERR mem16              verr selector                   7
+VERW reg16              verw cx                         7
+VERW mem16              verw selector                   7
+
+WAIT                    wait                            1
+
+WBINVD                  wbinvd                          2000+
+
+WRMSR                   wrmsr                           30-45
+
+XADD reg,reg            xadd dl,al                      3
+XADD mem,reg            xadd string,bl                  4
+
+XCHG reg,reg            xchg cx,dx                      3
+XCHG reg,mem            xchg bx,pointer                 3
+XCHG mem,reg            xchg [bx],ax                    3
+XCHG accum,reg          xchg ax,cx                      2
+XCHG reg,accum          xchg cx,ax                      2
+
+XLAT [[segreg:]mem]     xlat                            4
+XLATB [[segreg:]mem]    xlatb es:table                  4
+
+XOR reg,reg             xor cx,bx                       1
+XOR reg,mem             xor cx,flags                    2
+XOR mem,reg             xor [bp+10],cx                  3
+XOR reg,immed           xor bl,1                        1
+XOR mem,immed           xor switches[bx],101b           3
+XOR accum,immed         xor ax,01010101b                1
+

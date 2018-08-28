@@ -1,0 +1,150 @@
+                        Microsoft Support Services
+                        ==========================
+
+     If you have a question about Microsoft Macro Assembler (MASM), first 
+     look in the printed documentation, the online text files, or consult 
+     Help. If you cannot find the answer, contact the Microsoft Support 
+     Network. Outside the United States, contact Microsoft Product Support 
+     Services at the Microsoft subsidiary office that serves your area. 
+     For information about Microsoft subsidiary offices, see "Product 
+     Support Worldwide" later in this section.
+
+
+
+     The Microsoft Support Network
+     =============================
+     The Microsoft Support Network offers you a wide range of choices and 
+     access to high-quality, responsive technical support. Microsoft 
+     recognizes that support needs vary from user to user; the Microsoft 
+     Support Network allows you to choose the type of support that best 
+     meets your needs, with options ranging from electronic bulletin boards 
+     to annual support programs.
+   
+     If you have a question about MASM, first look in the product 
+     documentation or consult online Help. You can also find late-breaking 
+     updates and technical information in the README.TXT file and other 
+     text files that came with your MASM disks. 
+   
+     Services vary outside the United States and Canada. In other locations, 
+     contact a local Microsoft subsidiary for information. The Microsoft 
+     Support Network is subject to Microsoft’s then-current prices, terms, 
+     and conditions, and is subject to change without notice.
+
+
+
+     Product Support Within the United States and Canada
+     ===================================================
+     In the United States and Canada, the following support services are 
+     available through the Microsoft Support Network:
+   
+        Electronic Services
+        -------------------   
+        These services are available 24 hours a day, 7 days a week, 
+        including holidays.
+      
+        Microsoft FastTips
+        ------------------
+        (800) 936-4300 on a touch-tone telephone. Receive automated 
+        answers to common questions, and access a library of technical 
+        notes, all delivered by recording or fax. You can use the 
+        following keys on your touch-tone telephone after you reach 
+        FastTips:
+            
+            TO                                       PRESS
+            --                                       -----
+            Advance to the next message              *
+            Repeat the current message               7
+            Return to the beginning of FastTips      #
+      
+        CompuServe
+        ----------
+        Interact with other users and Microsoft support engineers, 
+        or access the Microsoft Knowledge Base to get product 
+        information. At any ! prompt, type go microsoft to access 
+        Microsoft forums, or type go mskb to access the Microsoft 
+        Knowledge Base. The Microsoft Languages forum (go mslang) has 
+        a section dedicated to MASM issues. For an introductory 
+        CompuServe membership kit, call (800) 848-8199, operator 230.
+      
+        Microsoft Download Service
+        --------------------------
+        (206) 936-6735 via modem. Access the Driver Library and 
+        the most current technical notes (1200, 2400, or 9600 
+        baud; no parity; 8 data bits; 1 stop bit).
+      
+        Internet
+        --------
+        Access the Driver Library and the Microsoft Knowledge Base. 
+        The Microsoft Internet FTP archive host, ftp.microsoft.com, 
+        supports anonymous login. When logging in as anonymous, you 
+        should type your complete electronic mail name as your password.
+
+        Standard Support
+        ----------------
+        No-charge support from Microsoft support engineers is available via 
+        a toll call between 6:00 A.M. and 6:00 P.M. Pacific time, Monday 
+        through Friday, excluding holidays. This support is available for 
+        90 days after you make your first call. 
+     
+        * For technical support for MASM, call 206-646-5109. When you 
+          call, you should be at your computer and have the appropriate 
+          product documentation at hand.  Be prepared to give the 
+          following information:
+
+          - The version number of the Microsoft product that you 
+            are using
+          - The type of hardware that you are using
+          - The exact wording of any messages that appeared on your 
+            screen
+          - A description of what happened and what you were doing 
+            when the problem occurred
+          - A description of how you tried to solve the problem
+
+   
+       Priority Support
+       ----------------
+       The Microsoft Support Network offers priority telephone access to 
+       Microsoft support engineers 24 hours a day, 7 days a week, except 
+       holidays.
+         
+       * (900) 555-2300; $2 per minute, $95 maximum. Charges 
+         appear on your telephone bill. 
+       * (800) 936-5800; $95 per incident, billed to your VISA 
+         card, MasterCard, or American Express card. 
+   
+       Text Telephone
+       --------------
+       Microsoft text telephone (TT/TDD) services are available for the 
+       deaf or hard-of-hearing. Using a TT/TDD modem, dial (206) 635-4948 
+       between 6:00 A.M. and 6:00 P.M. Pacific time, Monday through Friday, 
+       excluding holidays.
+   
+       Other Support Options
+       ---------------------
+       The Microsoft Support Network offers annual and multiple incident 
+       support plans. For information, contact the Microsoft Support Network 
+       Sales Group at (800) 936-3500 between 6:00 A.M. and 6:00 P.M. Pacific 
+       time, Monday through Friday, excluding holidays.
+
+
+
+     Product Training and Consultation
+     =================================
+     Microsoft Solution Providers are independent organizations that 
+     provide consulting, integration, customization, development, technical 
+     support and training, and other services for Microsoft products. These 
+     companies are called Solution Providers because they apply technology 
+     and provide services to help solve real-world problems.
+   
+     For more information about the Microsoft Solution  Providers program 
+     or the Microsoft Solution Provider nearest to you, please call (800) 
+     426-9400 between 6:30 A.M. and 5:30 P.M. Pacific time, Monday through 
+     Friday, excluding holidays.
+
+
+
+     Product Support Worldwide
+     =========================
+     Information about contacting Microsoft Subsidiaries outside the United 
+     States and Canada is given in the Introduction section of the MASM 
+     Environment and Tools manual, starting on page xxvi.
