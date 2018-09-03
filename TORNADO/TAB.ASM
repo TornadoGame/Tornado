@@ -4687,7 +4687,7 @@ FLIRDisp_Ori2 	PROC	NEAR
 		call	SetViewMode
 
 		COPY_VP	TMP_VIEW,M_VIEW
-        mov	TMP_VIEW.VP_ROLL,0 ;Added by Frankie Kam on 30/7/2018 to inhibit roll
+        ;mov	TMP_VIEW.VP_ROLL,0 ;Added by Frankie Kam on 30/7/2018 to inhibit roll
 		add	WORD PTR TMP_VIEW.VP_ZFT_LO,32	;add zft displacement ; 8
 		adc	WORD PTR TMP_VIEW.VP_ZFT_HI,0
 		

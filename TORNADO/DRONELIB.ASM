@@ -415,34 +415,12 @@ ContPlayerKill:
 		;mov	al,TornadoWpnDie[bx]
 
 		;DESTROY	al,TOTAL_DAMAGE
-		call	MaxDamage
-		call	MaxDamage
-		call	MaxDamage
-		call	MaxDamage
-		call	MaxDamage
-		call	MaxDamage
+
+		mov cx,28
+loopstart:
 		call	MaxDamage		
-		call	MaxDamage
-		call	MaxDamage
-		call	MaxDamage	
-		call	MaxDamage
-		call	MaxDamage
-		call	MaxDamage
-		call	MaxDamage
-		call	MaxDamage
-		call	MaxDamage
-		call	MaxDamage		
-		call	MaxDamage
-		call	MaxDamage
-		call	MaxDamage			
-		call	MaxDamage
-		call	MaxDamage
-		call	MaxDamage
-		call	MaxDamage
-		call	MaxDamage		
-		call	MaxDamage
-		call	MaxDamage
-		call	MaxDamage		
+	    dec cx          ;Note:  decrementing cx and jumping on result is
+        jnz loopstart 			
 		jmp	ExitKill
 
 ;--------------------------

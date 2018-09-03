@@ -36,7 +36,7 @@
 		PUBLIC	X_ElePosn
 		PUBLIC	X_AilPosn
 		PUBLIC	X_ThrotPosn
-		EXTRN	InstallUser100:FAR
+;EXTRN SplitScreenBigMapIsOn:BYTE		
 		EXTRN	InstallUser100:FAR
 		EXTRN	CalcDeltaTime:FAR
 		EXTRN	UpdateMovingMap:FAR
@@ -112,7 +112,7 @@ EXTRN	Night:BYTE
 		EXTRN	JoySensitivity:BYTE
 		EXTRN	DieFlag:BYTE
 
-		EXTRN	MAP_BIG_DISP:ABS
+EXTRN	MAP_FULL_DISP:ABS
 		EXTRN	MAP_ZOOM1:ABS
 		EXTRN	MAP_ZOOM6:ABS
 		EXTRN	MAP_ORG_CENTRE:ABS
@@ -140,7 +140,21 @@ DATA		SEGMENT PARA PUBLIC 'DATA'
 ;* large scale map data
 ;----------------------
 
-EXP_VIEW	VIEWPOINT <16,16,0,0,1000> ;Z_MIN>	;map viewpoint
+;VIEWPOINT	STRUCT
+;
+;VP_XSEC		DW	0		;x sector
+;VP_YSEC		DW	0		;y sector
+;VP_XFT		DW	0		;x ft
+;VP_YFT		DW	0		;y ft
+;VP_ZFT		DD	0		;z ft (0 .. 100,000)
+;VP_HDG		DW	0		;heading
+;VP_PITCH	DW	0		;pitch
+;VP_ROLL		DW	0		;roll
+;
+;VIEWPOINT	ENDS
+
+;EXP_VIEW VIEWPOINT VP_XSEC, VP_YSEC, VP_XFT, VP_YFT, VP_ZFT, VP_HDG, VP_PITCH, VP_ROLL,
+ EXP_VIEW VIEWPOINT <16,     16,      0,      0,      Z_INIT>
 
 ExpMapZoom 	DW	MAP_ZOOM1	;map zoom level
 
@@ -371,7 +385,9 @@ EXPCODE		SEGMENT BYTE PUBLIC 'CODE'
 ;* kill: assume all
 
 MapExplore	PROC	FAR
-
+        
+		;mov SplitScreenBigMapIsOn,0
+		
 		call	InitMapExplore
 
 ExploreLoop:	call	MapView
@@ -518,7 +534,7 @@ DrawMap		PROC	NEAR
 
 ;* redraw map and save to buffer
 
-		mov	ax,MAP_BIG_DISP
+		mov	ax,MAP_FULL_DISP
 		xor	cx,cx
 		xor	bl,bl
 		xor	bh,bh
@@ -1002,7 +1018,7 @@ CalcNewPos	ENDP
 ;* kill: assume all
 
 FlyView		PROC	NEAR
-
+		
 		call	InitFlyView
 
 FlyLoop:	call	UpdateKeys
@@ -1012,7 +1028,7 @@ FlyLoop:	call	UpdateKeys
 		call	CalcDeltaTime
 
 		call	ExploreModel
-
+		;mov	WORD PTR EXP_VIEW.VP_PITCH,384
 		mov	si,OFFSET EXP_VIEW
 		call	Visual
 
@@ -1060,7 +1076,7 @@ FlyView		ENDP
 InitFlyView	PROC	NEAR
 
 ;* initialize explore model
-
+        mov	WORD PTR EXP_VIEW.VP_PITCH,384
 		call	InitExpModel
 
 ;* set full screen visual
@@ -1069,8 +1085,9 @@ InitFlyView	PROC	NEAR
 		call	SetViewMode
 
 ;* generate visual and clear info bar on both screens
-
+		mov	WORD PTR EXP_VIEW.VP_PITCH,384
 		mov	si,OFFSET EXP_VIEW
+
 		call	Visual
 
 		call	ClearInfoBar
@@ -1124,6 +1141,10 @@ InitExpModel	PROC	NEAR
 
 @@:		mov	WORD PTR EXP_VIEW.VP_ZFT_HI,0
 
+		;mov	WORD PTR EXP_VIEW.VP_PITCH,384	;sub pitch displacement
+        mov	bx, EXP_VIEW.VP_PITCH
+		mov	HorizonValue4, bx
+		
 		call	CalcAngles
 
 ;* init control device
@@ -1286,20 +1307,28 @@ ExploreModel	PROC	NEAR
 		KTEST KF_Minimise  ;UpdateTracking
 		jz SkipAlexx1
 		sub HorizonValue4, 2
-		;add TrkCamAlt,2
+		cmp HorizonValue4,380
+		jl CapValueTo380
+		jmp SkipCapValueTo380
+CapValueTo380:
+        mov HorizonValue4,380
+SkipCapValueTo380:
 		KBOUNCE KF_Minimise
-		jmp SkipAlexx2
 SkipAlexx1:
 		KTEST KF_Range 
 		jz SkipAlexx2
 		add HorizonValue4, 2
-		;sub TrkCamAlt,2
+		cmp HorizonValue4,500
+		jg CapValueTo500
+		jmp SkipCapValueTo500
+CapValueTo500:		
+        mov HorizonValue4,500
+SkipCapValueTo500:		
 		KBOUNCE KF_Range
 SkipAlexx2:
         mov bx, HorizonValue4
 		mov	EXP_VIEW.VP_PITCH, bx 
-
-
+		
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 		
 ;* update x position (with sector change test)
@@ -1471,13 +1500,13 @@ CalcAngles	PROC	NEAR
 		mov	X_CosH,ax
 
 ;* VP_PITCH = X_PFine / 128
-
-		mov	bx,X_PFine
+		
+  	    mov	bx,X_PFine
 		shr	bx,cl
 		ROUNDUP	bx
 		and	bx,001ffh
 		mov	EXP_VIEW.VP_PITCH,bx
-
+	
 		shl	bx,1		;*2 word index
 		mov	ax,SinTable[bx]
 		mov	X_SinP,ax
@@ -1975,9 +2004,9 @@ Jumpz:
 AfterJumpz:		
 ;* elevators
 
-		mov	bl,Key[K_CRSRUP]	;pitch down
+		mov	bl,Key[K_CRSRDN]	;pitch down
 		shl	bl,1
-		or	bl,Key[K_CRSRDN]	;pitch up
+		or	bl,Key[K_CRSRUP]	;pitch up
 
 		mov	ax,X_ElePosn
 		mov	dx,KBD_ELE_RATE
@@ -1986,8 +2015,15 @@ AfterJumpz:
 
 ;* ailerons
 
+		;mov	bl,Key[K_CRSRRT]	;roll right		
+		;shl	bl,1		
+		;or	bl,Key[K_CRSRLF]	;roll left		
 
-	
+		;mov	ax,X_AilPosn	
+		;mov	dx,KBD_AIL_RATE	
+		;call	UpdatePosn		
+		;mov	X_AilPosn,ax
+
 		
 ;* speed (change Vtas directly - do not go via X_ThrotPosn)
 

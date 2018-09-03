@@ -89,6 +89,7 @@
 ;****************************************************************************
 
 		OPTION	M510		;<<<<< MASM v5.10 <<<<<
+		
 EXTRN   NVG_set:BYTE		
 EXTRN   PlayTheme:BYTE
 EXTRN	KF_TrackingCam:BYTE
@@ -670,10 +671,11 @@ ControlLoop	LABEL	NEAR
 ;-----------------
 
 	IF	OPT_DEBUG EQ 1
-
+	
 		test	Key[K_HASH],1
-		jz	@F
+		_JZ @F
 		call	PrintDebugInfo
+		
 @@:
 
 	ENDIF
@@ -931,22 +933,15 @@ RxDataOk:	call	UpdatePanel
 ;-----------------
 
 	IF	OPT_DEBUG EQ 1
-
-		test	Key[K_HASH],1
-		jz	@F
-		call	PrintDebugInfo
-@@:	
+		;test	Key[K_HASH],1
+		;jz	@F
+		;call	PrintDebugInfo
+;@@:	
 
 	ENDIF
 
 	IF	OPT_DEBUG EQ 1
-
-		;test	Key[K_F11],1
-		;jz	@F
-		;KBOUNCE Key[K_F11]
-		;call	VisualInfo
-		;jmp SkipCredits3
-;@@:		
+	
 		test	Key[K_H],1
 		jz	@F
 		KBOUNCE Key[K_H]  ;Frankie!

@@ -12,10 +12,7 @@
 
 		PUBLIC	MapView
 		PUBLIC	MapCompass
-EXTRN NVG_set:BYTE		
-EXTRN SplitScreenBigMapIsOn:BYTE		
-EXTRN DispType:WORD
-EXTRN EScopeToggle:BYTE
+EXTRN SplitScreenBigMapIsOn:BYTE
 		EXTRN	UpdateMovingMap:FAR
 		EXTRN	VSetViewport:FAR
 		EXTRN	VSetRotation:FAR
@@ -35,7 +32,7 @@ EXTRN EScopeToggle:BYTE
 		EXTRN	KF_MapZoomIn:BYTE
 		EXTRN	KF_MapZoomOut:BYTE
 
-		EXTRN	MAP_BIG_DISP:ABS
+		EXTRN	MAP_HALF_DISP:ABS
 		EXTRN	MAP_ZOOM1:ABS
 		EXTRN	MAP_ZOOM6:ABS
 		EXTRN	MAP_ORG_CENTRE:ABS
@@ -54,19 +51,14 @@ EXTRN EScopeToggle:BYTE
 DATA		SEGMENT PARA PUBLIC 'DATA'
 
 MapZoom		DW	MAP_ZOOM1
-
-VP		VIEWPORT <0,0,320,300,5,5> ;hack on 2/8/2018
+ExtraValue    DW  45
+VP		VIEWPORT <0,0,320,300,5,5>  ;Original was 200
+VP_FULL  VIEWPORT <0,0,320,200,5,5>  ;Original was 200
 
 Range$		LABEL	BYTE
 		P_OVER1
 		P_CHAR2
-		cmp NVG_set,1
-		je @F
-		PD_ATTR	000h,000h,000h,000h,000h,000h,COL_HUD,0
-		jmp zx
-@@:		
 		PD_ATTR	000h,000h,000h,000h,000h,000h,COL_COMPASS,0
-zx:		
 		PD_XY	148,114
 		PP_STR	RangeValsPtr
 		DB	"NM"
@@ -127,9 +119,7 @@ SkipZoomIn:	KTEST	KF_MapZoomOut	;zoom out?
 ;* draw map
 ;----------
 
-SkipZoomOut:
-
-        mov	ax,MAP_BIG_DISP
+SkipZoomOut:	mov	ax,MAP_HALF_DISP
 		xor	cx,cx
 		xor	bl,bl
 		xor	bh,bh
@@ -140,22 +130,6 @@ SkipZoomOut:
 		call	UpdateMovingMap
 		pop	si
 
-        cmp	DispType,MAP_BIG_DISP	;BIG display?
-		je @F
-		jmp hopstepleap3
-@@:		
-        cmp EScopeToggle,10
-		jbe check
-		ret
-check:  
-        cmp EScopeToggle,0
-		jg assign096c
-		ret
-assign096c: 		
-        mov cx, 0
-		mov bl,96
-hopstepleap3:		
-		
 		mov	ax,VP_HDG[si]
 		mov	dx,MapZoom
 		call	MapCompass
@@ -197,61 +171,64 @@ MapCompass	PROC	FAR
 ;---------------------
 ;* draw aircraft datum
 ;---------------------
-		cmp NVG_set,1
-		je setcolhud3
+
 		mov	al,COL_COMPASS
+		cmp SplitScreenBigMapIsOn,1
+		jne @F
 		mov	cx,160
-		mov	bl,100-4+45 ;kkk
-		mov	bh,100+3+45
+		mov	bl,100-4+45  ;Original was mov	bl,100-4cd
+		mov	bh,100+3+45  ;Original was mov	bh,100+3
 		call	VLineDraw
 
 		mov	al,COL_COMPASS
 		mov	cx,160-4
 		mov	dx,160+4
-		mov	bl,100-2+45
+		mov	bl,100-2+45  ;Original was mov	bl,100-2
 		call	HLineDraw
 
 		mov	al,COL_COMPASS
 		mov	cx,160-2
 		mov	dx,160+2
-		mov	bl,100+2+45
-		call	HLineDraw
-
-		jmp zx2
-		
-setcolhud3:	
-		mov	al,COL_HUD
+		mov	bl,100+2+45  ;Original was mov	bl,100+2
+		jmp frankie_2
+@@:		
 		mov	cx,160
-		mov	bl,100-4+45 ;kkk
-		mov	bh,100+3+45
+		mov	bl,100-4
+		mov	bh,100+3
 		call	VLineDraw
 
-		mov	al,COL_HUD
+		mov	al,COL_COMPASS
 		mov	cx,160-4
 		mov	dx,160+4
-		mov	bl,100-2+45
+		mov	bl,100-2
 		call	HLineDraw
 
-		mov	al,COL_HUD
+		mov	al,COL_COMPASS
 		mov	cx,160-2
 		mov	dx,160+2
-		mov	bl,100+2+45
+		mov	bl,100+2
+frankie_2:		
 		call	HLineDraw
 
-zx2:	
 
 ;---------------
 ;* init viewport
 ;---------------
 
 		xor	ax,ax		;no rotation
+		cmp SplitScreenBigMapIsOn,1
+		jne @F
 		mov	si,OFFSET VP
+		jmp frankie_3
+@@:		
+		mov	si,OFFSET VP_FULL
+frankie_3:		
 		call	VSetViewport
 
 ;--------------------------------
 ;* draw circumference graduations
 ;--------------------------------
-        		
+
 		mov	cx,32
 
 		xor	ax,ax		;0 .. 496 step 16
@@ -262,18 +239,12 @@ GradLoop:	push	ax
 		call	VSetRotation
 
 		mov	Xe[0],0
-		mov	Ye[0],30 ;30
+		mov	Ye[0],30
 
 		call	VDotClip
 		jc	@F		;non-visible ->
 
-		cmp NVG_set,1
-		je setcolhud4
 		mov	al,COL_COMPASS
-		jmp zx4
-setcolhud4:		
-		mov	al,COL_HUD
-zx4:		
 		call	SetPixel
 
 @@:		pop	cx
@@ -304,13 +275,7 @@ zx4:
 		call	VQuickLineClip
 		jc	@F		;non-visible ->
 
-		cmp NVG_set,1
-		je setcolhud5	
 		mov	al,COL_COMPASS
-		jmp zx5
-setcolhud5:		
-		mov	al,COL_HUD
-zx5:		
 		mov	cx,XCrt[0]
 		mov	bl,YCrt[0]
 		mov	dx,XCrt[2]
@@ -325,13 +290,7 @@ zx5:
 		call	VQuickLineClip
 		jc	@F		;non-visible ->
 
-		cmp NVG_set,1
-		je setcolhud6	
 		mov	al,COL_COMPASS
-		jmp zx6
-setcolhud6:		
-		mov	al,COL_HUD
-zx6:		
 		mov	cx,XCrt[0]
 		mov	bl,YCrt[0]
 		mov	dx,XCrt[2]
@@ -346,13 +305,7 @@ zx6:
 		call	VQuickLineClip
 		jc	@F		;non-visible ->
 
-		cmp NVG_set,1
-		je setcolhud7		
 		mov	al,COL_COMPASS
-		jmp zx7
-setcolhud7:		
-		mov	al,COL_HUD
-zx7:		
 		mov	cx,XCrt[0]
 		mov	bl,YCrt[0]
 		mov	dx,XCrt[2]
@@ -369,13 +322,7 @@ zx7:
 		call	VQuickLineClip
 		jc	@F		;non-visible ->
 
-		cmp NVG_set,1
-		je setcolhud8		
 		mov	al,COL_COMPASS
-		jmp zx8
-setcolhud8:		
-		mov	al,COL_HUD
-zx8:		
 		mov	cx,XCrt[0]
 		mov	bl,YCrt[0]
 		mov	dx,XCrt[2]
@@ -392,13 +339,7 @@ zx8:
 		call	VQuickLineClip
 		jc	@F		;non-visible ->
 
-		cmp NVG_set,1
-		je setcolhud9
 		mov	al,COL_COMPASS
-		jmp zx9
-setcolhud9:		
-		mov	al,COL_HUD
-zx9:		
 		mov	cx,XCrt[0]
 		mov	bl,YCrt[0]
 		mov	dx,XCrt[2]
@@ -415,13 +356,7 @@ zx9:
 		call	VQuickLineClip
 		jc	@F		;non-visible ->
 
-		cmp NVG_set,1
-		je setcolhud10
 		mov	al,COL_COMPASS
-		jmp zx10
-setcolhud10:		
-		mov	al,COL_HUD
-zx10:
 		mov	cx,XCrt[0]
 		mov	bl,YCrt[0]
 		mov	dx,XCrt[2]

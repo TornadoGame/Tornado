@@ -6,7 +6,7 @@
 ;*
 ;* 05.02.1992 - KJB
 ;* 25.02.1992 - KJB - Code moved from VISCODE to PANCODE.
-;* 01.04.1992 - KJB - MAP_BIG_DISP mode added.
+;* 01.04.1992 - KJB - MAP_HALF_DISP mode added.
 ;* 05.04.1992 - KJB - DrawMapBorder added.
 ;* 14.04.1992 - KJB - Specials reorganized.
 ;* 11.05.1992 - KJB - Draw lake features only.
@@ -24,10 +24,10 @@
 ;****************************************************************************
 
 		OPTION	M510		;<<<<< MASM v5.10 <<<<<
-        PUBLIC  InitMovingMap
+
 		PUBLIC	UpdateMovingMap
 		PUBLIC	DrawMapBorder
-PUBLIC DispType
+
 		PUBLIC	CurrentWPX
 		PUBLIC	CurrentWPY
 		PUBLIC	FloatWPX
@@ -37,7 +37,8 @@ PUBLIC DispType
 
 		PUBLIC	MAP_MFD_DISP
 		PUBLIC	MAP_TAB_DISP
-		PUBLIC	MAP_BIG_DISP
+		PUBLIC	MAP_HALF_DISP
+		PUBLIC	MAP_FULL_DISP
 		PUBLIC	MAP_ZOOM1
 		PUBLIC	MAP_ZOOM2
 		PUBLIC	MAP_ZOOM3
@@ -46,9 +47,9 @@ PUBLIC DispType
 		PUBLIC	MAP_ZOOM6
 		PUBLIC	MAP_ORG_CENTRE
 		PUBLIC	MAP_ORG_BASE
-;EXTRN AllowSplitScreenBigMap:BYTE
-EXTRN   NVG_set:BYTE
-EXTRN EScopeToggle:BYTE
+PUBLIC DispType ;Original was blank
+EXTRN SplitScreenBigMapIsOn:BYTE
+EXTRN EScopeToggle:BYTE ;Original was blank
 		EXTRN	BlockFill:FAR
 		EXTRN	PolyFill:FAR
 		EXTRN	PolyLine:FAR
@@ -147,13 +148,16 @@ MAP_VIEW	VIEWPOINT <>
 
 VP		VIEWPORT <>
 
+VP_FULL		VIEWPORT <>
+
 ;-------------------
 ;* map display types
 ;-------------------
 
 MAP_MFD_DISP	EQU	0		;MFD display
 MAP_TAB_DISP	EQU	2		;TAB display
-MAP_BIG_DISP	EQU	4		;full screen display
+MAP_HALF_DISP	EQU	4		;half screen display
+MAP_FULL_DISP	EQU	4		;full screen display
 
 DispType	DW	MAP_MFD_DISP	;display type
 
@@ -175,7 +179,7 @@ Zoom		DW	MAP_ZOOM1	;zoom level
 ;----------------------------
 
 ;* note: The MAP_ORG_BASE option is only implemented on MAP_MFD_DISP and
-;*	 MAP_TAB_DISP. MAP_BIG_DISP defaults to MAP_ORG_CENTRE.
+;*	 MAP_TAB_DISP. MAP_HALF_DISP defaults to MAP_ORG_CENTRE.
 
 MAP_ORG_CENTRE	EQU	0		;map origin at display centre
 MAP_ORG_BASE	EQU	2		;map origin at display base
@@ -283,9 +287,13 @@ SctrScale	DB	0,0
 
 ;* 		DW	width, depth
 
-DispSizeTable	DW	 64,  48	;MAP_MFD_DISP
+DispSizeTableHalf	DW	 64,  48	;MAP_MFD_DISP
 		DW	 96,  72	;MAP_TAB_DISP
-		DW	320, 105	;MAP_BIG_DISP  320,105 - hack 25/8/2018
+		DW	320, 105	;MAP_HALF_DISP - original was 200
+
+DispSizeTableFull	DW	 64,  48	;MAP_MFD_DISP
+		DW	 96,  72	;MAP_TAB_DISP
+		DW	320, 200	;MAP_HALF_DISP - original was 200		
 		
 ;--------------------------
 ;* scan size / scale tables (wrt DispType and Zoom)
@@ -293,8 +301,13 @@ DispSizeTable	DW	 64,  48	;MAP_MFD_DISP
 
 DispDataTable	DW	OFFSET MFDTable	;MAP_MFD_DISP
 		DW	OFFSET TABTable	;MAP_TAB_DISP
-		DW	OFFSET BIGTable	;MAP_BIG_DISP
+		DW	OFFSET HalfTable	;MAP_HALF_DISP
+		DW  OFFSET FullTable
 
+;DispDataTableFull	DW	OFFSET MFDTable	;MAP_MFD_DISP
+;		DW	OFFSET TABTable	;MAP_TAB_DISP
+;		DW	OFFSET FullTable	;MAP_HALF_DISP		
+		
 ;* 		DB	scan size, sector scale, scale up count, scale down count
 
 MFDTable	LABEL	BYTE		;MAP_MFD_DISP
@@ -319,7 +332,7 @@ TABTable	LABEL	BYTE		;MAP_TAB_DISP
 
 ;* 		DB	scan size, sector scale, scale up count, scale down count
 
-BIGTable	LABEL	BYTE		;MAP_BIG_DISP
+HalfTable	LABEL	BYTE		;MAP_HALF_DISP
 
 		DB	45, 0, 3, 6	;ZOOM1
 		DB	23, 0, 4, 6	;ZOOM2
@@ -328,6 +341,18 @@ BIGTable	LABEL	BYTE		;MAP_BIG_DISP
 		DB	 3, 1, 6, 6	;ZOOM5
 		DB	 3, 2, 5, 5	;ZOOM6
 
+;* 		DB	scan size, sector scale, scale up count, scale down count
+
+FullTable	LABEL	BYTE		;MAP_HALF_DISP
+
+		DB	45, 0, 3, 6	;ZOOM1
+		DB	23, 0, 4, 6	;ZOOM2
+		DB	13, 0, 5, 6	;ZOOM3
+		DB	 7, 0, 6, 6	;ZOOM4
+		DB	 3, 1, 6, 6	;ZOOM5
+		DB	 3, 2, 5, 5	;ZOOM6
+		
+		
 ;--------------------------------
 ;* viewpoint sector grid position
 ;--------------------------------
@@ -450,24 +475,8 @@ PANCODE		SEGMENT BYTE PUBLIC 'CODE'
 
 UpdateMovingMap	PROC	FAR
 
-;        cmp	DispType,MAP_BIG_DISP	;BIG display?
-;		je @F
-;		jmp hopstepleap
-;@@:		
-;        cmp EScopeToggle,10
-;		jbe check
-;		ret
-;check:  
-;        cmp EScopeToggle,0
-;		jg assign096b
-;		ret
-;assign096b: 		
-;        mov cx, 0
-;		mov bl,96
-;hopstepleap:		
-		
 		call	InitMovingMap
-		
+
 		call	DrawGround
 
 ;------------------------------------------
@@ -654,40 +663,53 @@ UpdateMovingMap	ENDP
 InitMovingMap	PROC	NEAR
 
 		mov	DispType,ax
-		
-        cmp	DispType,MAP_BIG_DISP	;BIG display?
-		je @F
-		jmp hopstepleap2
-@@:		
-        cmp EScopeToggle,10
-		jbe check2
-		ret
-check2:  
-        cmp EScopeToggle,0
-		jg assign096
-		ret
-assign096: 		
-        mov cx, 0
-		mov bl,96
-hopstepleap2:		
+	
+	;Original was blank
+	cmp SplitScreenBigMapIsOn,1
+	jne frankie_1
+	        cmp	DispType,MAP_HALF_DISP	
+			je @F		                
+			jmp hopstepleap2		
+	@@:				
+	        cmp EScopeToggle,10		
+			jbe check2		
+			ret		
+	check2:  		
+	        cmp EScopeToggle,0		
+			jg assign096		
+			ret		
+	assign096: 				
+	        mov cx, 0		
+			mov bl,96		
+	hopstepleap2:		
+	;Original was blank
+	frankie_1:
 		mov	GndRadar,bh
 
 		mov	Zoom,dx
 
 		mov	Origin,bp
-		mov	VP.V_X_ORG,cx
-			
-		mov	BYTE PTR VP.V_Y_ORG,bl  ;kkk
 
+		cmp SplitScreenBigMapIsOn,1
+		jne @F
+		mov	VP.V_X_ORG,cx
+		mov	BYTE PTR VP.V_Y_ORG,bl
+		jmp frankie_6
+@@:		
+		mov	VP_FULL.V_X_ORG,cx
+		mov	BYTE PTR VP_FULL.V_Y_ORG,bl
+
+frankie_6:
 		COPY_VP	MAP_VIEW,si
 
 ;-------------
 ;* sort origin
 ;-------------
 
-		cmp	DispType,MAP_BIG_DISP	;BIG display?
+		;cmp	DispType,MAP_HALF_DISP	;BIG display?
+		cmp	DispType,MAP_FULL_DISP	;BIG display?
 		je	SortDisp		;yes ->
-				
+
 		cmp	Origin,MAP_ORG_CENTRE	;map origin at display centre?
 		je	SortDisp		;yes ->
 
@@ -701,7 +723,6 @@ hopstepleap2:
 		mov	si,OFFSET TABBaseOrgTable
 
 @@:		mov	bx,Zoom
-
 		shl	bx,1
 		mov	bp,[si+bx+0]
 
@@ -768,12 +789,22 @@ SortDisp:	mov	bx,DispType
 
 		shl	bx,1			;(*4 index)
 
-		mov	ax,DispSizeTable[bx+0]	;width
+		cmp SplitScreenBigMapIsOn,1
+		jne @F
+		
+		mov	ax,DispSizeTableHalf[bx+0]	;width
 		mov	VP.V_WIDTH,ax
 
-		mov	ax,DispSizeTable[bx+2]	;depth
+		mov	ax,DispSizeTableHalf[bx+2]	;depth
 		mov	VP.V_DEPTH,ax
+		jmp frankie_4
+@@:
+		mov	ax,DispSizeTableFull[bx+0]	;width
+		mov	VP_FULL.V_WIDTH,ax
 
+		mov	ax,DispSizeTableFull[bx+2]	;depth
+		mov	VP_FULL.V_DEPTH,ax
+frankie_4:
 ;-----------------
 ;* sort zoom level
 ;-----------------
@@ -792,11 +823,20 @@ SortDisp:	mov	bx,DispType
 		mov	SctrScale,al
 
 		mov	al,[si+bx+2]	;scale up
+		
+		cmp SplitScreenBigMapIsOn,1
+		jne @F		
 		mov	VP.V_SCALE_UP,al
 
 		mov	al,[si+bx+3]	;scale down
 		mov	VP.V_SCALE_DN,al
+		jmp frankie_7
+@@:
+		mov	VP_FULL.V_SCALE_UP,al
 
+		mov	al,[si+bx+3]	;scale down
+		mov	VP_FULL.V_SCALE_DN,al
+frankie_7:
 ;------------------
 ;* calc radar range
 ;------------------
@@ -839,7 +879,13 @@ SortDisp:	mov	bx,DispType
 		neg	ax   		;negate hdg
 		and 	ax,001ffh
 
+		cmp SplitScreenBigMapIsOn,1
+		jne @F
 		mov	si,OFFSET VP
+		jmp frankie_5
+@@:		
+		mov	si,OFFSET VP_FULL
+frankie_5:		
 		call	VSetViewport
 
 ;---------------------
@@ -871,6 +917,7 @@ SortDisp:	mov	bx,DispType
 		adc	ax,0
 
 		mov	YGrid,ax
+
 		ret
 
 InitMovingMap	ENDP
@@ -885,6 +932,9 @@ InitMovingMap	ENDP
 
 DrawGround	PROC	NEAR
 
+		cmp SplitScreenBigMapIsOn,1
+		jne @F
+		
 		mov	cx,VP.V_X_ORG
 		mov	bl,BYTE PTR VP.V_Y_ORG
 		mov	dx,cx
@@ -892,6 +942,17 @@ DrawGround	PROC	NEAR
 		dec	dx
 		mov	bh,bl
 		add	bh,BYTE PTR VP.V_DEPTH
+		jmp frankie_8
+@@:
+		mov	cx,VP_FULL.V_X_ORG
+		mov	bl,BYTE PTR VP_FULL.V_Y_ORG
+		mov	dx,cx
+		add	dx,VP_FULL.V_WIDTH
+		dec	dx
+		mov	bh,bl
+		add	bh,BYTE PTR VP_FULL.V_DEPTH
+frankie_8:		
+		
 		dec	bh
 
 		mov	al,COL_MAP_GND1
@@ -1701,8 +1762,7 @@ ScanGndObjects:	mov	ax,SECDATA1
 		cmp	cl,GND_COPSED	;tree?
 		jbe	ScanGndObjects	;yes ->
 
-@@:    
-        mov	cl,SctrScale
+@@:		mov	cl,SctrScale
 
 		xor	dh,dh
 		sal	dx,cl
@@ -1719,13 +1779,7 @@ ScanGndObjects:	mov	ax,SECDATA1
 		call	VDotClip
 		jc	@F		;non-visible ->
 
-		cmp NVG_set,1
-		je NightVisionGndObj
-		mov	al,GndObjectCol;
-		jmp SkipNightVisionGrndObj
-NightVisionGndObj:
-		mov	al,COL_HUD
-SkipNightVisionGrndObj:		
+		mov	al,GndObjectCol
 		call	SetPixel
 
 @@:		pop	si
@@ -1786,12 +1840,23 @@ SortCurrentWP	PROC	NEAR
 		jc	ExitCurrentWP	;non-visible ->
 
 ;* calc x, y position relative to display origin
-
+		
+		cmp SplitScreenBigMapIsOn,1
+		jne @F
+		
 		sub	cx,VP.V_X_ORG
 		mov	CurrentWPX,cx
 
 		sub	bx,VP.V_Y_ORG
 		mov	CurrentWPY,bx
+		jmp frankie_9
+@@:
+		sub	cx,VP_FULL.V_X_ORG
+		mov	CurrentWPX,cx
+
+		sub	bx,VP_FULL.V_Y_ORG
+		mov	CurrentWPY,bx
+frankie_9:
 
 ExitCurrentWP:	ret
 
@@ -1847,13 +1912,24 @@ SortFloatWP	PROC	NEAR
 		jc	ExitFloatWP	;non-visible ->
 
 ;* calc x, y position relative to display origin
-
+		
+		cmp SplitScreenBigMapIsOn,1
+		jne @F
+	
 		sub	cx,VP.V_X_ORG
 		mov	FloatWPX,cx
 
 		sub	bx,VP.V_Y_ORG
 		mov	FloatWPY,bx
+		jmp frankie_10
+@@:		
+		sub	cx,VP_FULL.V_X_ORG
+		mov	FloatWPX,cx
 
+		sub	bx,VP_FULL.V_Y_ORG
+		mov	FloatWPY,bx
+frankie_10:
+		
 ExitFloatWP:	ret
 
 SortFloatWP	ENDP
@@ -1904,11 +1980,22 @@ SortACDatum	PROC	NEAR
 
 ;* calc x, y position relative to display origin
 
+		cmp SplitScreenBigMapIsOn,1
+		jne @F
+		
 		sub	cx,VP.V_X_ORG
 		mov	ACDatumX,cx
 
 		sub	bx,VP.V_Y_ORG
 		mov	ACDatumY,bx
+		jmp frankie_11
+@@:
+		sub	cx,VP_FULL.V_X_ORG
+		mov	ACDatumX,cx
+
+		sub	bx,VP_FULL.V_Y_ORG
+		mov	ACDatumY,bx
+frankie_11:		
 
 ExitACDatum:	ret
 
@@ -1990,14 +2077,8 @@ ScanStatMobs:	mov	ax,MSECDATA1
 
 		call	VDotClip
 		jc	SkipStatic1	;non-visible ->
-		
-		cmp NVG_set,1
-		je setcolourhud3
+
 		mov	al,COL_CRT16
-		jmp zxy3
-setcolourhud3:		
-		mov	al,COL_HUD
-zxy3:	
 		call	SetPixel
 
 SkipStatic1:	pop	si
@@ -2077,13 +2158,7 @@ ScanMobiles:  	cmp	si,-1		;end of list?
 		call	VDotClip
 		jc	SkipMobile	;non-visible ->
 
-		cmp NVG_set,1
-		je setcolourhud4
 		mov	al,COL_CRT16
-		jmp zxy4
-setcolourhud4:		
-		mov	al,COL_HUD
-zxy4:
 		call	SetPixel
 
 SkipMobile:	pop	si
@@ -2660,8 +2735,15 @@ DrawMapBorder	PROC	FAR
 ;* initialize viewport
 ;---------------------
 
+		cmp SplitScreenBigMapIsOn,1
+		jne @F
+		
 		mov	VP.V_SCALE_UP,0
-
+		jmp frankie_12
+@@:
+        mov	VP_FULL.V_SCALE_UP,0
+frankie_12:		
+		
 ;* calc scale down wrt zoom:-
 ;*
 ;* MAP_ZOOM1 =   8 pixels / sector =   4096 / 8 * 16 = 32 (>> 5)
@@ -2677,11 +2759,23 @@ DrawMapBorder	PROC	FAR
 		mov	dx,Zoom
 		shr	dx,1
 		sub	ax,dx
+		cmp SplitScreenBigMapIsOn,1
+		jne @F		
 		mov	VP.V_SCALE_DN,al
-
+		jmp frankie_13
+@@:		
+		mov	VP_FULL.V_SCALE_DN,al
+frankie_13:		
 		xor	ax,ax		;zero hdg
 
+		cmp SplitScreenBigMapIsOn,1
+		jne @F		
 		mov	si,OFFSET VP
+		jmp frankie_14
+@@:		
+		mov	si,OFFSET VP_FULL
+frankie_14:		
+		
 		call	VSetViewport
 
 ;----------------------
@@ -2887,14 +2981,7 @@ HDotLoop:	cmp	cx,dx		;end of line?
 		push	cx
 		push	dx
 
-		cmp NVG_set,1
-		je setcolourhud1
 		mov	al,COL_MAP_BORDER
-		jmp zxy1
-setcolourhud1:		
-		mov	al,COL_HUD
-zxy1:		
-		
 		call	SetPixel
 
 		pop	dx
@@ -2936,13 +3023,7 @@ VDotLoop:	cmp	bl,bh		;end of line?
 		push	cx
 		push	dx
 
-		cmp NVG_set,1
-		je setcolourhud2
 		mov	al,COL_MAP_BORDER
-		jmp zxy2
-setcolourhud2:		
-		mov	al,COL_HUD
-zxy2:	
 		call	SetPixel
 
 		pop	dx
