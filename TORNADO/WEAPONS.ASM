@@ -1721,6 +1721,9 @@ SwitchToDive	LABEL	NEAR
 ;* reset roll (for better visual effect after loiter)
 
 		mov	WPN_View.VP_ROLL,0
+		;Added this in so that the ALARM fires towards its target with
+		;a full plume of fire at its back nozzle!
+		mov	WPN_Mobile.MOB_ANIM,FLAME
 
 ;* if viewing weapon then reset camera bearing (to prevent visual glitch)
 

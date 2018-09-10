@@ -628,8 +628,10 @@ call    LoadPilotPan
 		
 		call	RandX		; 0.00 ..  2.55 secs
 		cmp	ax,(2*256)/100	;2% chance of random shake in cockpit
-		ja	SkipShakeCockpit0
-		
+		jbe	NotSkipShakeCockpit0
+		SHAKE	SHAKE_NOSE_DOWN,HSHAKE_OFF,VSHAKE_OFF,5
+		ret
+NotSkipShakeCockpit0:		
 		call	RandX	
 		cmp	ax,(30*256)/100	
 		jb SkipShakeCockpit1
@@ -648,8 +650,6 @@ SkipShakeCockpit2:
 SkipShakeCockpit3:		
         SHAKE	SHAKE_LAND_GOOD,HSHAKE_LO,VSHAKE_OFF,5
 		ret
-SkipShakeCockpit0:
-        SHAKE	SHAKE_NOSE_DOWN,HSHAKE_OFF,VSHAKE_OFF,5
 NoShakes:		
 		ret
 
@@ -1334,7 +1334,7 @@ UpdateCompass	ENDP
 UpdateCtrlSFace	PROC	NEAR
 
 cmp	CrewMode,CREW_PILOT	;pilot?
-je	StandardLocation			;yes, pilot ->
+je	StandardLoc			;yes, pilot ->
 
 ;--------------------------
 ;* flaps position indicator
@@ -1351,7 +1351,7 @@ cmp	TAB2.TAB_MODE,TAB_TIALD_ORI
 je CheckPitchLimitOrTabDamaged
 
 cmp	CrewMode,CREW_NAVIG
-jne StandardLocation
+jne StandardLoc
 ret
 
 CheckPitchLimitOrTabDamaged:
@@ -1369,6 +1369,7 @@ CheckPitchLimitOrTabDamaged:
 		jnz	RausOut
 		jmp CustomLocationFlapsSlats
 RausOut: ret
+StandardLoc: jmp StandardLocation
 CustomLocationFlapsSlats:
 XCENTRE		=	11-5
 YCENTRE		=	170-15

@@ -56,6 +56,7 @@ EXTRN YawValue_ZRK_AAA:WORD
 EXTRN SAM_VIEW:WORD		
 EXTRN AAA_VIEW1:WORD		
 EXTRN AAA_VIEW2:WORD	
+EXTRN EScopeToggle:BYTE
 EXTRN   InWeaponView:BYTE	
 EXTRN   CockpitViews:BYTE	
 EXTRN   HorizonValue:WORD		
@@ -1103,14 +1104,20 @@ SkipTracking:	KTEST	KF_SatelliteCam
 SkipSatellite:	       
 		KTEST	KF_MapView
 		jz	SkipMapView	
-
-        mov SplitScreenBigMapIsOn,0
+        ;mov AllowSplitScreenBigMap,1
+		;jmp check3
 		
-		;mov InCockpit,0
-		;xor AllowSplitScreenBigMap,1
-		test AllowSplitScreenBigMap,1  ;Allow only in the special case where this variable is set to 1 !!
-		_JZ SkipMapView		
-		mov SplitScreenBigMapIsOn,1   ;Signal that the Splitscreen Big Map is currently active (on)
+	    cmp EScopeToggle,10		
+		jbe check1		
+		jmp nope
+	check1:  		
+	    cmp EScopeToggle,0		
+		jg check3
+		mov SplitScreenBigMapIsOn,0
+		jmp nope
+	check3: 				
+	    mov SplitScreenBigMapIsOn,1
+	nope:		
 		mov CockpitViews,0
         mov InWeaponView,0
 		mov	ax,VIEW_MAP
@@ -1204,17 +1211,11 @@ FailDroneType:	jmp	UpdateView
 SkipDroneType:	
         KTEST	KF_DroneView	;drone view / next drone?
 		jz	SkipDroneView	;no ->	
-		
         mov SplitScreenBigMapIsOn,0		
-		
 		mov CurrentViewIsCheckSix,0
-		;mov	ax,VIEW_DRONE
-		;call	ChgGameViewMode
-		;mov CockpitViews,0
 		mov InWeaponView,1
 		
 ;* ignore drone view if two player
-
 		test	TwoPlayer,1
 		jnz	SkipDroneView	
 

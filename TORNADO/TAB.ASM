@@ -2062,7 +2062,9 @@ ContRefSlew:	push	dx		;store button status
 		sub	bp,RefZoom		;18 .. 8 step 2
 		shr	bp,1			; 9 .. 4
 
-@@:		shl	ax,1
+@@:
+
+		shl	ax,1
 		rcl	dx,1
 
 		shl	bx,1
@@ -2142,7 +2144,9 @@ ContRefSlew:	push	dx		;store button status
 ;* draw map
 ;----------
 
-DrawRefMap:	mov	ax,M_VIEW.VP_HDG	;update hdg
+DrawRefMap:	
+
+        mov	ax,M_VIEW.VP_HDG	;update hdg
 		mov	REF_VIEW.VP_HDG,ax
 
 		mov	ax,MAP_TAB_DISP
@@ -2153,6 +2157,7 @@ DrawRefMap:	mov	ax,M_VIEW.VP_HDG	;update hdg
 		mov	bp,MAP_ORG_CENTRE
 
 		mov	si,OFFSET REF_VIEW
+
 		call	UpdateMovingMap
 
 ;-------------------------------
@@ -2196,11 +2201,13 @@ putcolorhud1:
 		PLOTSYM	 3,  0, COL_HUD
 		PLOTSYM	 4,  0, COL_HUD		
 getout1:			
+
 ;----------------------------
 ;* draw aircraft datum symbol (if visible)
 ;----------------------------
 
-SkipWPSymbol:	mov	cx,ACDatumX
+SkipWPSymbol:	
+        mov	cx,ACDatumX
 		mov	bx,ACDatumY
 
 		cmp	cx,-1		;x valid?
@@ -2256,7 +2263,8 @@ getout2:
 
 ;* if just designated, adjust designator pos to match target waypoint pos
 
-SkipACSymbol:	test	RefDesignated,1	;just designated?
+SkipACSymbol:	
+        test	RefDesignated,1	;just designated?
 		jz	@F		;no ->
 
 		mov	cx,FloatWPX
@@ -2267,7 +2275,7 @@ SkipACSymbol:	test	RefDesignated,1	;just designated?
 
 @@:		mov	cx,RefDesX
 		mov	bx,RefDesY
-		
+;ret		
 		cmp NVG_set,1
 		je putcolorhud3
 		PLOTSYM	 0, -2, COL_REF_SYM
@@ -2292,7 +2300,7 @@ getout3:
 ;------------------------------------------------------
 ;* display map datum range, bearing etc. (from Tornado)
 ;------------------------------------------------------
-
+;ret		
 ;* calc range and bearing
 
 		mov	si,OFFSET M_VIEW
@@ -2333,15 +2341,16 @@ getout3:
 		mov	RefETA,ax
 
 @@:		
+;ret <-- interesting
 		cmp NVG_set,1
 		je putcolorhud4        
 		mov	si,OFFSET RefMap$
+		jmp getout4
 putcolorhud4:		
         mov	si,OFFSET RefMap_COL_HUD$
-		jmp getout4
 getout4:		
 		call	Print$
-
+;ret-no good
 		mov	si,OFFSET RefETA$	;assume ETA valid
 
 		cmp	RefETA,-1		;valid?

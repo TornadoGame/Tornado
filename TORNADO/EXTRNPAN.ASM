@@ -21,7 +21,22 @@
 
 		PUBLIC	LoadExtrnPan
 		PUBLIC	UpdateExtrn
+EXTRN	ForeCol:BYTE		
+EXTRN	BackCol:BYTE		
+EXTRN NVG_set:BYTE		
+EXTRN	PrintChar:FAR		
+EXTRN	PrtLn:WORD		
+EXTRN CurrentWPX:WORD		
+EXTRN CurrentWPY:WORD
+EXTRN CharSprite:FAR
+EXTRN MFDAttr1:BYTE
+EXTRN ModePtr:WORD		
+EXTRN XOrg:WORD		
+EXTRN YOrg:BYTE
+EXTRN	FloatWP:WORD		
+EXTRN	WPRngNMiles:WORD		
 EXTRN	MorseDashSound:FAR	
+EXTRN	WPETA:WORD
 EXTRN AllowSplitScreenBigMap:BYTE		
 EXTRN SplitScreenBigMapIsOn:BYTE		
 EXTRN SSF_HUD:BYTE
@@ -72,7 +87,7 @@ EXTRN   UpdateADI2:NEAR
 EXTRN   HorizonValue:WORD	
 EXTRN	CrewMode:WORD
 EXTRN	WPPtr:WORD
-EXTRN	WPRngNMiles:WORD
+;EXTRN	WPRngNMiles:WORD
 		EXTRN	Vkts:WORD
 		EXTRN	DispBarAlt:WORD
 		EXTRN	TrueRadAlt:WORD
@@ -136,14 +151,14 @@ AlertCol	DB	0ffh,000h,0aah,000h,00ch,000h,COL_TEXT_ALERT,COL_BLACK
 AlertCol2	DB	0ffh,000h,0aah,000h,00ch,000h,COL_LT_RED,COL_BLACK
 AlertColCyan	DB	0ffh,000h,0aah,000h,00ch,000h,COL_LT_CYAN,COL_BLACK
 AlertColYellow	DB	0ffh,000h,0aah,000h,00ch,000h,COL_YELLOW,COL_BLACK
-AlertColRed	DB	0ffh,000h,0aah,000h,00ch,000h,COL_CRT_RED,COL_BLACK
+AlertColRed	DB	0ffh,000h,0aah,000h,00ch,000h,COL_WHITE,COL_CRT_RED
 
 Info$		LABEL	BYTE
 		P_OVER1
 		P_CHAR2
 		PV_ATTR	TextCol1
 		PD_XY	0*4,193
-		DB	"WAYP=     SP=   KTS "
+		DB	"WP=       SP=   KTS "
                 DB     "ROL=   ~ "
 		DB	"ALT=     FT "
 		DB	"VSI=      FT/MIN "
@@ -159,15 +174,6 @@ MoreInfo$		LABEL	BYTE
 		DB	"RA=   ~ "
 		DB	"RR=     /SEC"
 		P_END		
-		
-WAYP$		LABEL	BYTE
-		P_CHAR2
-		PV_ATTR	AlertCol
-	    P_DECAT	00000000b	;(default)
-		PD_XY	5*4,193		;(set x pos for view mode text)
-		PP_STR WPPtr
-		P_END
-
 		
 PFI$		LABEL	BYTE
 		P_CHAR2
@@ -197,28 +203,40 @@ PFI$		LABEL	BYTE
 		P_DECAT	00000000b	;(default)
 		P_END
 
+WAYP$		LABEL	BYTE
+		P_CHAR2
+		PV_ATTR	AlertCol
+	    P_DECAT	00000000b	;(default)
+		PD_XY	3*4,193		;(set x pos for view mode text) ;5*4
+		PP_ATTR	COL_LT_CYAN
+		;PP_STR [WPPtr].WP_ID
+		;PV_CHR [WPPtr].WP_ID
+		PP_STR WPPtr
+		P_END		
+		
+	
 PFIcyan$		LABEL	BYTE
 		P_CHAR2
 		PV_ATTR	TextCol2
 		P_DECAT	00100011b	;(unsigned, 3 digits, leading zeroes)
-		PD_XY	6*4,193
-		PV_DECW	WPRngNMiles		;PP_ATTR	COL_BLACK
+		PD_XY	3*4,193
+		PV_ETA	WPETA		;PP_ATTR	COL_BLACK
 		P_END
 
 PFIyellow$		LABEL	BYTE
         P_CHAR2
 		PV_ATTR	AlertColYellow
 		P_DECAT	00100011b	;(unsigned, 3 digits, leading zeroes)
-		PD_XY	6*4,193
-		PV_DECW	WPRngNMiles		;PP_ATTR	COL_BLACK
+		PD_XY	3*4,193
+		PV_ETA	WPETA		;PP_ATTR	COL_BLACK
 		P_END
 
 PFIlightred$		LABEL	BYTE
         P_CHAR2
 		PV_ATTR	AlertCol2
 		P_DECAT	00100011b	;(unsigned, 3 digits, leading zeroes)
-		PD_XY	6*4,193
-		PV_DECW	WPRngNMiles		;PP_ATTR	COL_BLACK
+		PD_XY	3*4,193
+		PV_ETA	WPETA		;PP_ATTR	COL_BLACK
 		P_END
 		
 		
@@ -226,8 +244,8 @@ PFIred$		LABEL	BYTE
         P_CHAR2
 		PV_ATTR	AlertColRed
 		P_DECAT	00100011b	;(unsigned, 3 digits, leading zeroes)
-		PD_XY	6*4,193
-		PV_DECW	WPRngNMiles		;PP_ATTR	COL_BLACK
+		PD_XY	3*4,193
+		PV_ETA	WPETA		;PP_ATTR	COL_BLACK
 		P_END
 		
 BarAlt$		LABEL	BYTE
@@ -372,7 +390,13 @@ LoadExtrnPan	PROC	NEAR
 
 ;* clear text area
 
-@@:		mov	al,COL_BLACK
+@@:		cmp NVG_set,1
+        je @F
+        mov	al,COL_BLACK
+		jmp SkipCOL_CRT2
+@@:		
+        mov al,COL_CRT2
+SkipCOL_CRT2:		
 		mov	bl,192
 		mov	bh,199
 		mov	cx,0
@@ -494,10 +518,22 @@ SkipMap:	mov	PrintOver,al
 		mov	ViewCol,OFFSET AlertCol	
 
 ;* print primary flight information
-
-@@:				
-        mov	si,OFFSET WAYP$
-		call	Print$		
+@@:				          
+        ;mov	si,OFFSET WAYP$
+		;call	Print$	
+		mov	PrtCl,8*4  ;3*4
+		mov	PrtLn,193	
+        cmp WPPtr, -1
+        je @F		
+		mov	si,WPPtr
+		jmp Skipppa
+@@:	    mov	[WPPtr].WP_ID,'-'
+		mov	si,WPPtr
+Skipppa:		
+		mov	al,[si].WP_ID
+		mov ForeCol, COL_TEXT_ALERT
+		mov BackCol, COL_BLACK
+		call	PrintChar		
 ;* print countdown timer to current waypoint		
         cmp WPRngNMiles,10
 		ja Miles_Cyan 
@@ -515,8 +551,7 @@ Miles_Yellow:
 		jmp @F
 Miles_LightRed:		
 		mov	si,OFFSET PFIlightred$				
-@@:		
-		call	Print$		
+@@:		call	Print$		
 	
 	
 ;* calc DispHdg (1 .. 360)

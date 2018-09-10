@@ -28,6 +28,7 @@
 		EXTRN	SuspendSound:FAR
 		EXTRN	ResumeSound:FAR
 EXTRN	ShakeUp:BYTE
+EXTRN   NVG_set:BYTE
 		EXTRN	SecScanCnt1:WORD
 		EXTRN	SecScanOff1:WORD
 		EXTRN	SecScanCnt2:WORD
@@ -675,8 +676,10 @@ SkipRange:	;KFETCH	KF_GndText
 
 		KFETCH	KF_Horizon
 	    ;xor	ShakeUp,al
+		cmp NVG_set,1
+		je @F
 		xor	GradEnabled,al
-
+@@:
 ;--------------------
 ;* minimise / restore
 ;--------------------

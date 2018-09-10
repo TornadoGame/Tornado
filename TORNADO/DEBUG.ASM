@@ -75,67 +75,67 @@ InfoDI$		LABEL	BYTE
 PX		=	108
 PY		=	15
 		PD_XY	PX,PY		;frame rate
-		DB " ";	"";"*DIGITAL INTEGRATION 1993*"
+		DB "*DIGITAL INTEGRATION 1993*"
 PX		=	94
 PY		=	PY+6+LINESPC
 		PD_XY	PX,PY		;polygon count
-		DB " ";	"DAVID K MARSHALL: Project Manager"
+		DB "DAVID K MARSHALL: Project Manager"
 PX		=	8		
 PY		=	PY+LINESPC
 		PD_XY	PX,PY		;x sector
-		DB " ";	"KEVIN BEZANT, NICK MASCALL, TONY HOSIER, ROBIN HEYDON, MATTHEW SMITH: Design"		
+		DB "KEVIN BEZANT, NICK MASCALL, TONY HOSIER, ROBIN HEYDON, MATTHEW SMITH: Design"		
 PX		=	78		
 PY		=	PY+LINESPC
 		PD_XY	PX,PY		;x sector
-		DB " ";	"NICK MASCALL, DAVID MARSHALL: Manual text"
+		DB "NICK MASCALL, DAVID MARSHALL: Manual text"
 PX		=	48
 PY		=	PY+LINESPC
 		PD_XY	PX,PY		;x sector
-		DB " ";	"KERRY LE-GRAY, WENDY HOSKIN: Graphics, artwork & package"
+		DB "KERRY LE-GRAY, WENDY HOSKIN: Graphics, artwork & package"
 PX		=	94
 PY		=	PY+LINESPC
 		PD_XY	PX,PY		;xft
-		DB " ";	"DERROL EULING: Technical drawings"
+		DB "DERROL EULING: Technical drawings"
 PX		=	64
 PY		=	PY+LINESPC
 		PD_XY	PX,PY		;xft
-		DB " ";	"ROD SWIFT, RUSSELL ALCOCK, JEFFREY LOVE: Testing"
+		DB "ROD SWIFT, RUSSELL ALCOCK, JEFFREY LOVE: Testing"
 PX		=	78
 PY		=	PY+LINESPC
 		PD_XY	PX,PY		;xft
-		DB " ";	"ROD COBAIN, STEPHANIE BURNETT: Production"
+		DB "ROD COBAIN, STEPHANIE BURNETT: Production"
 PX		=	110
 PY		=	PY+LINESPC
 		PD_XY	PX,PY		;xft
-		DB " ";	"DEBBIE DURRANT: Marketing"
+		DB "DEBBIE DURRANT: Marketing"
 PX		=	48
 PY		=	PY+LINESPC
 	    PD_XY	PX,PY		;xft
-		DB " ";	"VICKI MCBURNIE, JULIE-ANN MERRIT, GILL NIL: Anc. support"
-PX		=	100
+		DB "VICKI MCBURNIE, JULIE-ANN MERRIT, GILL NIL: Anc. support"
+PX		=	120
 PY		=	PY+LINESPC
 		PD_XY	PX,PY		;xft
-		DB " ";	"DAVID WHITTAKER: SFX"		
+		DB "DAVID WHITTAKER: SFX"		
 PX		=	62
 PY		=	PY+LINESPC
 		PD_XY	PX,PY		;xft
-		DB " ";	"DAVID PUNSHON, RICHARD WELLS, DOMINIC KING: Music"											
+		DB "DAVID PUNSHON, RICHARD WELLS, DOMINIC KING: Music"											
 PX		=	128
 PY		=	PY+14+LINESPC
 		PD_XY	PX,PY		;polygon count
-		DB " ";	"*COMMUNITY 2018*"		
+		DB "*COMMUNITY 2018*"		
 PX		=	66
 PY		=	PY+6+LINESPC
 		PD_XY	PX,PY		;xft
-		DB " "; "FRANKIE, TAILFIN, ATARIBABY, MUPF: Mods, Github"
+		DB "FRANKIE, TAILFIN, ATARIBABY, MUPF: Mods, Github"
 PX		=	110
 PY		=	PY+LINESPC
 		PD_XY	PX,PY		;xft
-		DB " ";	"SPEEDWAGON, TOMN: Testing"		
+		DB "SPEEDWAGON, TOMN: Testing"		
 PX		=	100
 PY		=	PY+LINESPC
 		PD_XY	PX,PY		;xft
-		DB " ";	"and to many others, thank you!"		
+		DB "and to many others, thank you!"		
 ;PX		=	2
 ;PY		=	PY+LINESPC
 ;		PD_XY	PX,PY		;xft

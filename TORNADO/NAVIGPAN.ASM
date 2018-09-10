@@ -516,7 +516,10 @@ Neutral:
 		_JNE NoShakesNavig	
         call	RandX		; 0.00 ..  2.55 secs
 		cmp	ax,(2*256)/100	;2% chance of random shake in cockpit
-		ja	SkipShakeNav0
+		jbe	NotSkipShakeNav0
+		SHAKE	SHAKE_NOSE_DOWN,HSHAKE_OFF,VSHAKE_OFF,5	
+		ret
+NotSkipShakeNav0:		
 		call	RandX	
 		cmp	ax,(30*256)/100	
 		jb SkipShakeNav1
@@ -535,8 +538,6 @@ SkipShakeNav2:
 SkipShakeNav3:		
         SHAKE	SHAKE_LAND_GOOD,HSHAKE_LO,VSHAKE_OFF,5
 		ret
-SkipShakeNav0:
-        SHAKE	SHAKE_NOSE_DOWN,HSHAKE_OFF,VSHAKE_OFF,5	
 NoShakesNavig:		
 		ret
 
@@ -1700,7 +1701,7 @@ SkipPrtLn169_PrtCl140_RightTVTab:
 		mov	PrtLn,70
 SkipSkipPrtLn169_PrtCl140:
 		cmp	Cannons,0		;any cannons?
-		je	SkipAirWpn1		;no ->
+		je	BeforeSkipAirWpn1		;no ->
 
 		cmp	TrueRadAlt,MIN_OP_RAD_ALT
 		jl DontSkipBlink
@@ -1739,7 +1740,8 @@ DontSkipBlink:
 		mov	si,OFFSET Cannon$
 		call	Print$
 		jmp SkipSkipBlink
-
+BeforeSkipAirWpn1:
+        jmp SkipAirWpn1
 SkipBlink:
 ;* do not blink when counting down
 
@@ -1779,6 +1781,7 @@ SkipAirWpn1:	mov	PrtCl,144
 		je AirArm
 		cmp	TAB2.TAB_MODE,TAB_TIALD_ORI	;map selected?		
 		je AirArm
+
 DontGoAirArm:
 		cmp	TAB1.TAB_MODE,TAB_FLIR_ORI	;map selected?		
 		je AirArm
@@ -2117,7 +2120,33 @@ comeouttohereMan:
 		jge BackToNavigPanel
         xor	ToggleFullScreen,1	;alternate between full screen FLIR and TIALD
 		jz tab2tialdori
+        jmp afterafter
+tab2tialdori:		
+
 		
+;----------------------------------
+;* test for TAB1 switched on or not
+;----------------------------------	
+	
+		test TAB1.TAB_STATUS,1
+		jz	@F   ;no ->
+
+;-----------------------
+;* test for damaged TAB1
+;-----------------------
+
+		mov	bx,TAB1.TAB_SSF_PTR
+		test	BYTE PTR [bx],1		;display damaged?
+		jnz	@F		;yes ->
+
+        cmp TAB2.TAB_MODE,TAB_TIALD_ORI  ;Is TV-Tab2 already showing the small TV-Tab-sized TIALD view?
+		je @F       ;yes -> Do NOT view full-screen TIALD view in TAB1! We can't have 2 simulataneous TV-TAB views!		
+		mov TAB1.TAB_MODE,TAB_TIALD_ORI
+		jmp CheckNext
+@@:
+        jmp testoforTAB2
+
+afterafter:
 		mov	di,OFFSET TAB1	;other TAB display		
         mov	si,OFFSET TAB2	;this TAB display
 
@@ -2220,34 +2249,12 @@ Rubix:
 		mov ax, MFD_Counter
 		mov NAVIG_MFD.MFD_MODE,ax
 		jmp CheckNext
-tab2tialdori:		
 
-		
-;----------------------------------
-;* test for TAB1 switched on or not
-;----------------------------------	
-	
-		test TAB1.TAB_STATUS,1
-		jz	@F   ;no ->
-
-;-----------------------
-;* test for damaged TAB1
-;-----------------------
-
-		mov	bx,TAB1.TAB_SSF_PTR
-		test	BYTE PTR [bx],1		;display damaged?
-		jnz	@F		;yes ->
-
-        cmp TAB2.TAB_MODE,TAB_TIALD_ORI  ;Is TV-Tab2 already showing the small TV-Tab-sized TIALD view?
-		je @F       ;yes -> Do NOT view full-screen TIALD view in TAB1! We can't have 2 simulataneous TV-TAB views!		
-		mov TAB1.TAB_MODE,TAB_TIALD_ORI
-		jmp CheckNext
-@@:
 
 ;----------------------------------
 ;* test for TAB2 switched on or not
 ;----------------------------------		
-		
+testoforTAB2:
 		test TAB2.TAB_STATUS,1
 		jz	@F   ;no ->
 

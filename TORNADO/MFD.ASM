@@ -9,6 +9,7 @@
 ;****************************************************************************
 
 		OPTION	M510		;<<<<< MASM v5.10 <<<<<
+
 PUBLIC DamagedDispMFD
 PUBLIC UpdateMFD
 PUBLIC RadarDisp
@@ -16,7 +17,6 @@ PUBLIC ModePtr
 PUBLIC AutoPilotDisp
 PUBLIC ILSDisp
 PUBLIC GndMappingRadar
-
 		PUBLIC	UpdatePilotMFD
 		PUBLIC	UpdateNavigMFD
 		PUBLIC	SelectRadarMFD
@@ -216,7 +216,8 @@ YC		EQU	MFD_DEPTH/2-1	;centre y
 
 XOrg		DW	0
 YOrg		DB	0,0		;sometimes accessed as word
-
+PUBLIC XOrg
+PUBLIC YOrg
 ;------------------
 ;* pilot's MFD data
 ;------------------
@@ -496,6 +497,8 @@ WPTEL		DW	0		;secs
 MFDAttr1	DB	0ffh,000h,0aah,000h,0aah,000h,COL_CRT8,000h	;dull green
 
 MFDAttr2	DB	0ffh,000h,0aah,000h,0aah,000h,COL_CRT16,000h	;bright green
+
+PUBLIC MFDAttr1
 
 AFDS$		LABEL	BYTE
 		P_OVER1
@@ -3038,8 +3041,17 @@ ILSDisp		ENDP
 
 FLIRDisp	PROC	NEAR
         cmp	si,OFFSET PILOT_MFD	;Pilot's MFD?
-		jne	GoNavMFD			;no ->
-		
+		je	DontGoNavMFD
+		cmp	TAB1.TAB_MODE,TAB_FLIR	;TAB1 FLIR selected?
+		je	@F			
+		cmp	TAB1.TAB_MODE,TAB_TIALD	;TAB1 TIALD selected?
+		je	@F					
+		mov	ax,TV1_VIEWMODE	;set viewmode for MFD
+		jmp Zebra		
+@@:        
+		mov	ax,TV1_VIEWMODE	;set viewmode for MFD
+		jmp Zebra
+DontGoNavMFD:			;no ->
 		mov	ax,EXT_VIEWMODE	;set viewmode for MFD
 		cmp IronWork, 1
 		jne SkipMovIronWork0
@@ -3048,7 +3060,6 @@ FLIRDisp	PROC	NEAR
 		mov	bl,YOrg
 		call	SetViewMode
 		COPY_VP	TMP_VIEW,M_VIEW
-		;mov TMP_VIEW.VP_PITCH,0  ;hack frankie
 		add	WORD PTR TMP_VIEW.VP_ZFT_LO,8	;add zft displacement
 		adc	WORD PTR TMP_VIEW.VP_ZFT_HI,0
 		call	DrawIRImage
@@ -3057,12 +3068,8 @@ FLIRDisp	PROC	NEAR
 		je	@F			;yes ->
 		mov	ax,NUL_VIEWMODE		;nav view
 @@:		call	SetViewMode	        
-		
 		cmp	PILOT_MFD.MFD_MODE,MFD_FLIR	;TAB2's FLIR selected?
         jne BypassEScope2 ;yes ->  		
-		
-        ;call UpdateEScope2
-
 BypassEScope2:
         call LoadExtrnPan  
         call UpdateExtrn
@@ -3070,14 +3077,12 @@ BypassEScope2:
         call UpdateHUD2 
 		call UpdateRWR		
         mov	IronWork,1
-		ret
-		
+		ret		
 SkipMovIronWork0:		
 		mov	cx,XOrg
 		mov	bl,YOrg
 		call	SetViewMode
 		COPY_VP	TMP_VIEW,M_VIEW
-		;mov TMP_VIEW.VP_PITCH,0  ;hack frankie
 		add	WORD PTR TMP_VIEW.VP_ZFT_LO,8	;add zft displacement
 		adc	WORD PTR TMP_VIEW.VP_ZFT_HI,0
 		call	DrawIRImage
@@ -3085,38 +3090,20 @@ SkipMovIronWork0:
 		cmp	CrewMode,CREW_PILOT	;pilot?
 		je	@F			;yes ->
 		mov	ax,NUL_VIEWMODE		;nav view
-@@:		call	SetViewMode	        
-		
+@@:		call	SetViewMode	        		
 		cmp	PILOT_MFD.MFD_MODE,MFD_FLIR	;TAB2's FLIR selected?
         jne BypassEScope2b ;yes ->  		
-        ;call UpdateEScope2
-
 BypassEScope2b:
         call LoadExtrnPan  
         call UpdateExtrn
         call UpdateHUD2 
 		call UpdateRWR		
-        ;mov	IronWork,1
 		ret
-
-GoNavMFD:		
-        ;cmp	dx,OFFSET NavigPanel ;kbs
-		;je @F  
-		cmp	TAB1.TAB_MODE,TAB_FLIR	;TAB1 FLIR selected?
-		je	@F			
-		cmp	TAB1.TAB_MODE,TAB_TIALD	;TAB1 TIALD selected?
-		je	@F					
-		mov	ax,TV1_VIEWMODE	;set viewmode for MFD
-		jmp Zebra
-		
-@@:        
-		mov	ax,TV1_VIEWMODE	;set viewmode for MFD
 Zebra:		
 		mov	cx,XOrg
 		mov	bl,YOrg
 		call	SetViewMode
 		COPY_VP	TMP_VIEW,M_VIEW
-		;mov TMP_VIEW.VP_PITCH,0  ;hack frankie
 		add	WORD PTR TMP_VIEW.VP_ZFT_LO,8	;add zft displacement
 		adc	WORD PTR TMP_VIEW.VP_ZFT_HI,0
 		call	DrawIRImage
@@ -3124,10 +3111,9 @@ Zebra:
 		cmp	CrewMode,CREW_PILOT	;pilot?
 		je	@F			;yes ->
 		mov	ax,NUL_VIEWMODE		;nav view
-;@@:		
+@@:		
         call	SetViewMode	      
 		ret
-
 FLIRDisp	ENDP
 
 
