@@ -37,7 +37,7 @@ weapons modeling, thousands of objects in the 3D environment and
 classic 332-paged paper manual.
 
 ### Screenshots
-[![01](SCRSHOTS/01.PNG)](SCRSHOTS/01.PNG?raw=true "01")
+[![01](01.PNG)](01.PNG?raw=true "01")
 [![02](SCRSHOTS/02.PNG)](SCRSHOTS/02.PNG?raw=true "02")
 [![03](SCRSHOTS/03.PNG)](SCRSHOTS/03.PNG?raw=true "03")
 [![04](SCRSHOTS/04.PNG)](SCRSHOTS/04.PNG?raw=true "04")
