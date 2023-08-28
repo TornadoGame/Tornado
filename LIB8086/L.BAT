@@ -1,3 +1,0 @@
-link @main.lnk
-
-
